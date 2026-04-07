@@ -1,0 +1,1031 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IDS — Intrusion Detection System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        --bg: #030a12;
+        --surface: #071524;
+        --glass: rgba(7, 28, 54, 0.55);
+        --border: rgba(0, 210, 255, 0.12);
+        --accent: #00d2ff;
+        --accent2: #00ff9d;
+        --accent3: #ff3e6c;
+        --muted: #3a6a8a;
+        --text: #c8e6f5;
+        --text-dim: #5a8aaa;
+        --mono: "Share Tech Mono", monospace;
+        --display: "Syne", sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--display);
+        overflow-x: hidden;
+        min-height: 100vh;
+      }
+
+      /* ── GRID OVERLAY ─────────────────────────── */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(0, 210, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 210, 255, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* ── SCANLINE EFFECT ──────────────────────── */
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.15) 2px,
+          rgba(0, 0, 0, 0.15) 4px
+        );
+        pointer-events: none;
+        z-index: 999;
+        opacity: 0.35;
+      }
+
+      /* ── NAVBAR ───────────────────────────────── */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 2.5rem;
+        height: 64px;
+        background: rgba(3, 10, 18, 0.85);
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        text-decoration: none;
+      }
+      .nav-brand .shield {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        clip-path: polygon(
+          50% 0%,
+          100% 25%,
+          100% 75%,
+          50% 100%,
+          0% 75%,
+          0% 25%
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        color: #000;
+        font-weight: 900;
+        animation: shieldPulse 3s ease-in-out infinite;
+        flex-shrink: 0;
+      }
+      @keyframes shieldPulse {
+        0%,
+        100% {
+          filter: drop-shadow(0 0 6px var(--accent));
+        }
+        50% {
+          filter: drop-shadow(0 0 18px var(--accent2));
+        }
+      }
+      .nav-brand .brand-text {
+        font-family: var(--mono);
+        font-size: 0.95rem;
+        color: var(--accent);
+        letter-spacing: 0.08em;
+      }
+      .brand-text span {
+        color: var(--accent2);
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .nav-pill {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.4rem 1.1rem;
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        letter-spacing: 0.06em;
+        text-decoration: none;
+        transition: all 0.25s;
+      }
+      .nav-pill.ghost {
+        border: 1px solid var(--border);
+        color: var(--accent);
+        background: transparent;
+      }
+      .nav-pill.ghost:hover {
+        background: rgba(0, 210, 255, 0.08);
+        border-color: var(--accent);
+        box-shadow: 0 0 16px rgba(0, 210, 255, 0.2);
+      }
+      .nav-pill.filled {
+        border: 1px solid var(--accent2);
+        background: rgba(0, 255, 157, 0.08);
+        color: var(--accent2);
+      }
+      .nav-pill.filled:hover {
+        background: rgba(0, 255, 157, 0.18);
+        box-shadow: 0 0 20px rgba(0, 255, 157, 0.25);
+      }
+
+      /* ── HERO ─────────────────────────────────── */
+      .hero {
+        position: relative;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6rem 2rem 4rem;
+        overflow: hidden;
+      }
+
+      /* Radial glow blob */
+      .hero::before {
+        content: "";
+        position: absolute;
+        top: 20%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 700px;
+        height: 500px;
+        background: radial-gradient(
+          ellipse,
+          rgba(0, 210, 255, 0.12) 0%,
+          rgba(0, 255, 157, 0.05) 40%,
+          transparent 70%
+        );
+        pointer-events: none;
+        animation: blobDrift 8s ease-in-out infinite alternate;
+      }
+      @keyframes blobDrift {
+        from {
+          transform: translateX(-55%) scaleY(1);
+        }
+        to {
+          transform: translateX(-45%) scaleY(1.1);
+        }
+      }
+
+      .hero-inner {
+        position: relative;
+        z-index: 1;
+        max-width: 900px;
+        width: 100%;
+        text-align: center;
+      }
+
+      .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        letter-spacing: 0.15em;
+        color: var(--accent);
+        border: 1px solid rgba(0, 210, 255, 0.25);
+        background: rgba(0, 210, 255, 0.06);
+        padding: 0.35rem 1rem;
+        border-radius: 2px;
+        margin-bottom: 2rem;
+        text-transform: uppercase;
+      }
+      .hero-badge .dot {
+        width: 6px;
+        height: 6px;
+        background: var(--accent2);
+        border-radius: 50%;
+        animation: blink 1.2s step-start infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      .hero-title {
+        font-size: clamp(2rem, 5vw, 3.6rem);
+        font-weight: 800;
+        line-height: 1.1;
+        letter-spacing: -0.01em;
+        margin-bottom: 1.5rem;
+      }
+      .hero-title .line1 {
+        color: #fff;
+        display: block;
+      }
+      .hero-title .line2 {
+        display: block;
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .hero-desc {
+        font-family: var(--mono);
+        font-size: 0.95rem;
+        color: var(--text-dim);
+        line-height: 1.8;
+        max-width: 640px;
+        margin: 0 auto 3rem;
+      }
+      .hero-desc .hl {
+        color: var(--accent);
+      }
+
+      .hero-cta {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.85rem 2.2rem;
+        background: linear-gradient(135deg, var(--accent), #0091b5);
+        color: #000;
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 0.95rem;
+        letter-spacing: 0.04em;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+      }
+      .btn-primary::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, var(--accent2), var(--accent));
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .btn-primary:hover::before {
+        opacity: 1;
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px rgba(0, 210, 255, 0.35);
+      }
+      .btn-primary > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.85rem 2.2rem;
+        background: transparent;
+        color: var(--text);
+        font-family: var(--display);
+        font-weight: 600;
+        font-size: 0.95rem;
+        letter-spacing: 0.04em;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.3s;
+      }
+      .btn-secondary:hover {
+        border-color: var(--muted);
+        background: rgba(255, 255, 255, 0.04);
+        transform: translateY(-2px);
+        color: #fff;
+      }
+
+      /* ── STATS STRIP ──────────────────────────── */
+      .stats-strip {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        justify-content: center;
+        gap: 3rem;
+        flex-wrap: wrap;
+        padding: 2.5rem 2rem;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        background: rgba(7, 21, 36, 0.5);
+      }
+      .stat-item {
+        text-align: center;
+      }
+      .stat-num {
+        font-family: var(--mono);
+        font-size: 1.8rem;
+        font-weight: 700;
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .stat-label {
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-top: 0.2rem;
+      }
+
+      /* ── SECTION TITLE ────────────────────────── */
+      .section {
+        position: relative;
+        z-index: 1;
+        padding: 6rem 2rem;
+      }
+      .section-header {
+        text-align: center;
+        margin-bottom: 3.5rem;
+      }
+      .section-tag {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.2em;
+        color: var(--accent);
+        text-transform: uppercase;
+        margin-bottom: 0.6rem;
+      }
+      .section-title {
+        font-size: clamp(1.6rem, 3vw, 2.4rem);
+        font-weight: 800;
+        color: #fff;
+      }
+      .section-title span {
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      /* ── MODEL CARDS ──────────────────────────── */
+      .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      .model-card {
+        position: relative;
+        background: var(--glass);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 2rem;
+        backdrop-filter: blur(20px);
+        transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+        overflow: hidden;
+      }
+      .model-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        border-radius: 8px 8px 0 0;
+        transition: opacity 0.35s;
+        opacity: 0.7;
+      }
+      .model-card.rf::before {
+        background: linear-gradient(90deg, var(--accent), transparent);
+      }
+      .model-card.svm::before {
+        background: linear-gradient(90deg, var(--accent2), transparent);
+      }
+      .model-card.insight::before {
+        background: linear-gradient(90deg, var(--accent3), transparent);
+      }
+
+      .model-card:hover {
+        transform: translateY(-6px);
+        border-color: rgba(0, 210, 255, 0.3);
+        box-shadow:
+          0 24px 60px rgba(0, 0, 0, 0.5),
+          0 0 40px rgba(0, 210, 255, 0.08);
+      }
+      .model-card.svm:hover {
+        border-color: rgba(0, 255, 157, 0.3);
+        box-shadow:
+          0 24px 60px rgba(0, 0, 0, 0.5),
+          0 0 40px rgba(0, 255, 157, 0.1);
+      }
+      .model-card.insight:hover {
+        border-color: rgba(255, 62, 108, 0.3);
+        box-shadow:
+          0 24px 60px rgba(0, 0, 0, 0.5),
+          0 0 40px rgba(255, 62, 108, 0.08);
+      }
+
+      /* corner decoration */
+      .model-card::after {
+        content: "";
+        position: absolute;
+        bottom: -30px;
+        right: -30px;
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        opacity: 0.07;
+        transition: opacity 0.35s;
+      }
+      .model-card.rf::after {
+        background: var(--accent);
+      }
+      .model-card.svm::after {
+        background: var(--accent2);
+      }
+      .model-card.insight::after {
+        background: var(--accent3);
+      }
+      .model-card:hover::after {
+        opacity: 0.14;
+      }
+
+      .card-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        margin-bottom: 1.2rem;
+      }
+      .rf .card-icon {
+        background: rgba(0, 210, 255, 0.1);
+        color: var(--accent);
+        border: 1px solid rgba(0, 210, 255, 0.2);
+      }
+      .svm .card-icon {
+        background: rgba(0, 255, 157, 0.1);
+        color: var(--accent2);
+        border: 1px solid rgba(0, 255, 157, 0.2);
+      }
+      .insight .card-icon {
+        background: rgba(255, 62, 108, 0.1);
+        color: var(--accent3);
+        border: 1px solid rgba(255, 62, 108, 0.2);
+      }
+
+      .card-label {
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        margin-bottom: 0.4rem;
+      }
+      .rf .card-label {
+        color: var(--accent);
+      }
+      .svm .card-label {
+        color: var(--accent2);
+      }
+      .insight .card-label {
+        color: var(--accent3);
+      }
+
+      .card-model-name {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 1.2rem;
+      }
+
+      /* accuracy ring */
+      .accuracy-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.4rem;
+      }
+      .ring-wrap {
+        position: relative;
+        width: 70px;
+        height: 70px;
+        flex-shrink: 0;
+      }
+      .ring-wrap svg {
+        transform: rotate(-90deg);
+      }
+      .ring-bg {
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.07);
+        stroke-width: 5;
+      }
+      .ring-val {
+        fill: none;
+        stroke-width: 5;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 1.2s ease;
+      }
+      .rf .ring-val {
+        stroke: var(--accent);
+      }
+      .svm .ring-val {
+        stroke: var(--accent2);
+      }
+      .ring-center {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+      .rf .ring-center {
+        color: var(--accent);
+      }
+      .svm .ring-center {
+        color: var(--accent2);
+      }
+
+      .accuracy-meta {
+        flex: 1;
+      }
+      .acc-big {
+        font-family: var(--mono);
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .rf .acc-big {
+        color: var(--accent);
+      }
+      .svm .acc-big {
+        color: var(--accent2);
+      }
+      .acc-sub {
+        font-size: 0.72rem;
+        color: var(--text-dim);
+        margin-top: 0.2rem;
+      }
+
+      .best-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        padding: 0.25rem 0.7rem;
+        background: rgba(0, 255, 157, 0.1);
+        border: 1px solid rgba(0, 255, 157, 0.3);
+        color: var(--accent2);
+        border-radius: 2px;
+        letter-spacing: 0.08em;
+        margin-bottom: 1rem;
+      }
+
+      .card-metrics {
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+      }
+      .metric-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .metric-key {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        color: var(--text-dim);
+      }
+      .metric-val {
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+      .metric-bar-wrap {
+        width: 100%;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 2px;
+        margin-top: 0.2rem;
+      }
+      .metric-bar {
+        height: 3px;
+        border-radius: 2px;
+        transition: width 1.4s ease;
+      }
+      .rf .metric-bar {
+        background: linear-gradient(
+          90deg,
+          var(--accent),
+          rgba(0, 210, 255, 0.4)
+        );
+      }
+      .svm .metric-bar {
+        background: linear-gradient(
+          90deg,
+          var(--accent2),
+          rgba(0, 255, 157, 0.4)
+        );
+      }
+
+      /* insight card special */
+      .insight-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+      }
+      .insight-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        font-size: 0.85rem;
+        color: var(--text);
+        line-height: 1.5;
+      }
+      .insight-list li .ico {
+        font-size: 0.75rem;
+        margin-top: 0.2rem;
+        color: var(--accent3);
+        flex-shrink: 0;
+      }
+
+      /* ── ANIMATION HELPERS ────────────────────── */
+      .fade-in {
+        opacity: 0;
+        transform: translateY(22px);
+        animation: fadeUp 0.7s forwards;
+      }
+      .fade-in:nth-child(1) {
+        animation-delay: 0.1s;
+      }
+      .fade-in:nth-child(2) {
+        animation-delay: 0.22s;
+      }
+      .fade-in:nth-child(3) {
+        animation-delay: 0.34s;
+      }
+      @keyframes fadeUp {
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      /* responsive */
+      @media (max-width: 640px) {
+        nav {
+          padding: 0 1.2rem;
+        }
+        .nav-brand .brand-text {
+          font-size: 0.8rem;
+        }
+        .hero {
+          padding: 5rem 1.2rem 3rem;
+        }
+        .stats-strip {
+          gap: 1.5rem;
+        }
+        .cards-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── NAVBAR ─────────────────────────── -->
+    <nav>
+      <a class="nav-brand" href="#">
+        <div class="shield">IDS</div>
+      </a>
+      <div class="nav-links">
+        <a href="/login" class="nav-pill ghost"
+          ><i class="fa-solid fa-lock"></i> Login</a
+        >
+        <a href="/upload" class="nav-pill filled"
+          ><i class="fa-solid fa-upload"></i> Upload Data</a
+        >
+      </div>
+    </nav>
+
+    <!-- ── HERO ───────────────────────────── -->
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="hero-badge fade-in">
+          <span class="dot"></span>
+          System Active — Real-time Monitoring
+        </div>
+
+        <h1 class="hero-title fade-in">
+          <span class="line1">Intrusion Detection System</span>
+          <span class="line2">using Random Forest and SVM</span>
+        </h1>
+
+        <p class="hero-desc fade-in">
+          Classify and detect network intrusions in real-time using
+          <span class="hl">Random Forest</span> and
+          <span class="hl">SVM (RBF)</span> models trained on the NSL-KDD
+          dataset — with SMOTE-enhanced minority class detection.
+        </p>
+
+        <div class="hero-cta fade-in">
+          <a href="/upload" class="btn-primary">
+            <span><i class="fa-solid fa-shield-halved"></i></span>
+            <span>Start Detection</span>
+          </a>
+          <a href="/history" class="btn-secondary">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            View History
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── STATS STRIP ─────────────────────── -->
+    <div class="stats-strip">
+      <div class="stat-item">
+        <div class="stat-num">80.1%</div>
+        <div class="stat-label">Best Model Accuracy</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">2</div>
+        <div class="stat-label">ML Algorithms</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">SMOTE</div>
+        <div class="stat-label">Class Balancing</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">NSL-KDD</div>
+        <div class="stat-label">Training Dataset</div>
+      </div>
+    </div>
+
+    <!-- ── MODEL RESULTS ──────────────────── -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-tag">// model_performance</div>
+        <h2 class="section-title">
+          Algorithm <span>Performance Results</span>
+        </h2>
+      </div>
+
+      <div class="cards-grid">
+        <!-- Random Forest -->
+        <div class="model-card rf fade-in">
+          <div class="card-icon"><i class="fa-solid fa-tree"></i></div>
+          <div class="card-label">Algorithm 01</div>
+          <div class="card-model-name">Random Forest</div>
+
+          <div class="accuracy-row">
+            <div class="ring-wrap">
+              <svg viewBox="0 0 70 70" width="70" height="70">
+                <circle class="ring-bg" cx="35" cy="35" r="30" />
+                <circle
+                  class="ring-val"
+                  cx="35"
+                  cy="35"
+                  r="30"
+                  stroke-dasharray="188.5"
+                  stroke-dashoffset="39.9"
+                />
+                <!-- 188.5*(1-0.788) -->
+              </svg>
+              <div class="ring-center">78.8%</div>
+            </div>
+            <div class="accuracy-meta">
+              <div class="acc-big">78.8%</div>
+              <div class="acc-sub">Test Accuracy</div>
+            </div>
+          </div>
+
+          <div class="card-metrics">
+            <div>
+              <div class="metric-row">
+                <span class="metric-key">Accuracy</span>
+                <span class="metric-val" style="color: var(--accent)"
+                  >78.8%</span
+                >
+              </div>
+              <div class="metric-bar-wrap">
+                <div class="metric-bar rf" style="width: 78.8%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="metric-row">
+                <span class="metric-key">Precision</span>
+                <span class="metric-val" style="color: var(--accent)"
+                  >77.4%</span
+                >
+              </div>
+              <div class="metric-bar-wrap">
+                <div class="metric-bar rf" style="width: 77.4%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="metric-row">
+                <span class="metric-key">Recall</span>
+                <span class="metric-val" style="color: var(--accent)"
+                  >76.1%</span
+                >
+              </div>
+              <div class="metric-bar-wrap">
+                <div class="metric-bar rf" style="width: 76.1%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="metric-row">
+                <span class="metric-key">F1-Score</span>
+                <span class="metric-val" style="color: var(--accent)"
+                  >76.7%</span
+                >
+              </div>
+              <div class="metric-bar-wrap">
+                <div class="metric-bar rf" style="width: 76.7%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SVM -->
+        <div class="model-card svm fade-in">
+          <div class="card-icon"><i class="fa-solid fa-microchip"></i></div>
+          <div class="card-label">Algorithm 02</div>
+          <div class="card-model-name">SVM (RBF Kernel)</div>
+          <div class="best-badge">
+            <i class="fa-solid fa-star"></i> Best Model
+          </div>
+
+          <div class="accuracy-row">
+            <div class="ring-wrap">
+              <svg viewBox="0 0 70 70" width="70" height="70">
+                <circle class="ring-bg" cx="35" cy="35" r="30" />
+                <circle
+                  class="ring-val svm"
+                  cx="35"
+                  cy="35"
+                  r="30"
+                  stroke-dasharray="188.5"
+                  stroke-dashoffset="37.4"
+                  style="stroke: var(--accent2)"
+                />
+              </svg>
+              <div class="ring-center" style="color: var(--accent2)">80.1%</div>
+            </div>
+            <div class="accuracy-meta">
+              <div class="acc-big" style="color: var(--accent2)">80.1%</div>
+              <div class="acc-sub">Test Accuracy</div>
+            </div>
+          </div>
+
+          <div class="card-metrics">
+            <div>
+              <div class="metric-row">
+                <span class="metric-key">Accuracy</span>
+                <span class="metric-val" style="color: var(--accent2)"
+                  >80.1%</span
+                >
+              </div>
+              <div class="metric-bar-wrap">
+                <div class="metric-bar svm" style="width: 80.1%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="metric-row">
+                <span class="metric-key">Precision</span>
+                <span class="metric-val" style="color: var(--accent2)"
+                  >79.3%</span
+                >
+              </div>
+              <div class="metric-bar-wrap">
+                <div class="metric-bar svm" style="width: 79.3%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="metric-row">
+                <span class="metric-key">Recall</span>
+                <span class="metric-val" style="color: var(--accent2)"
+                  >78.8%</span
+                >
+              </div>
+              <div class="metric-bar-wrap">
+                <div class="metric-bar svm" style="width: 78.8%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="metric-row">
+                <span class="metric-key">F1-Score</span>
+                <span class="metric-val" style="color: var(--accent2)"
+                  >79.0%</span
+                >
+              </div>
+              <div class="metric-bar-wrap">
+                <div class="metric-bar svm" style="width: 79%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Key Insights -->
+        <div class="model-card insight fade-in">
+          <div class="card-icon"><i class="fa-solid fa-lightbulb"></i></div>
+          <div class="card-label">Analysis</div>
+          <div class="card-model-name">Key Insights</div>
+
+          <ul class="insight-list">
+            <li>
+              <i class="fa-solid fa-circle-check ico"></i>
+              <span
+                ><strong style="color: #fff">SMOTE oversampling</strong>
+                significantly improved minority class (attack) detection rates
+                across both models.</span
+              >
+            </li>
+            <li>
+              <i class="fa-solid fa-circle-check ico"></i>
+              <span
+                ><strong style="color: #fff">SVM with RBF kernel</strong>
+                outperforms Random Forest by ~1.3% on accuracy and generalizes
+                better on unseen traffic.</span
+              >
+            </li>
+            <li>
+              <i class="fa-solid fa-circle-check ico"></i>
+              <span
+                ><strong style="color: #fff">Feature engineering</strong> on the
+                NSL-KDD dataset reduced dimensionality and improved convergence
+                speed.</span
+              >
+            </li>
+            <li>
+              <i class="fa-solid fa-circle-check ico"></i>
+              <span
+                ><strong style="color: #fff">Class imbalance</strong> was the
+                primary challenge; SMOTE resolved false-negative rates on rare
+                attack classes.</span
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

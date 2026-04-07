@@ -1,0 +1,1208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IDS — Detection History</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        --bg: #030a12;
+        --glass: rgba(7, 28, 54, 0.55);
+        --border: rgba(0, 210, 255, 0.12);
+        --accent: #00d2ff;
+        --accent2: #00ff9d;
+        --accent3: #ff3e6c;
+        --warn: #f5a623;
+        --muted: #3a6a8a;
+        --text: #c8e6f5;
+        --text-dim: #5a8aaa;
+        --mono: "Share Tech Mono", monospace;
+        --display: "Syne", sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--display);
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* Grid overlay */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(0, 210, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 210, 255, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+        z-index: 0;
+      }
+      /* Scanlines */
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.15) 2px,
+          rgba(0, 0, 0, 0.15) 4px
+        );
+        pointer-events: none;
+        z-index: 999;
+        opacity: 0.3;
+      }
+
+      /* ── NAVBAR ───────────────────────────────── */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 2.5rem;
+        height: 64px;
+        background: rgba(3, 10, 18, 0.85);
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid var(--border);
+      }
+      .nav-brand {
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+      }
+      .nav-brand .shield {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        clip-path: polygon(
+          50% 0%,
+          100% 25%,
+          100% 75%,
+          50% 100%,
+          0% 75%,
+          0% 25%
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        color: #000;
+        font-weight: 900;
+        font-family: var(--display);
+        animation: shieldPulse 3s ease-in-out infinite;
+      }
+      @keyframes shieldPulse {
+        0%,
+        100% {
+          filter: drop-shadow(0 0 6px var(--accent));
+        }
+        50% {
+          filter: drop-shadow(0 0 18px var(--accent2));
+        }
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      .nav-pill {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.4rem 1.1rem;
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        letter-spacing: 0.06em;
+        text-decoration: none;
+        transition: all 0.25s;
+      }
+      .nav-pill.ghost {
+        border: 1px solid var(--border);
+        color: var(--accent);
+        background: transparent;
+      }
+      .nav-pill.ghost:hover {
+        background: rgba(0, 210, 255, 0.08);
+        border-color: var(--accent);
+        box-shadow: 0 0 16px rgba(0, 210, 255, 0.2);
+      }
+      .nav-pill.filled {
+        border: 1px solid var(--accent2);
+        background: rgba(0, 255, 157, 0.08);
+        color: var(--accent2);
+      }
+      .nav-pill.filled:hover {
+        background: rgba(0, 255, 157, 0.18);
+        box-shadow: 0 0 20px rgba(0, 255, 157, 0.25);
+      }
+      .nav-pill.danger {
+        border: 1px solid rgba(255, 62, 108, 0.3);
+        background: rgba(255, 62, 108, 0.06);
+        color: var(--accent3);
+      }
+      .nav-pill.danger:hover {
+        background: rgba(255, 62, 108, 0.14);
+        box-shadow: 0 0 16px rgba(255, 62, 108, 0.2);
+      }
+      .nav-pill.active {
+        border-color: var(--accent);
+        background: rgba(0, 210, 255, 0.1);
+      }
+
+      /* ── PAGE ─────────────────────────────────── */
+      .page {
+        position: relative;
+        z-index: 1;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 5rem 2rem 4rem;
+      }
+
+      /* ── PAGE HEADER ──────────────────────────── */
+      .page-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 2.2rem;
+        padding-bottom: 1.6rem;
+        border-bottom: 1px solid var(--border);
+        animation: fadeUp 0.5s ease forwards;
+      }
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(16px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      .page-tag {
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        letter-spacing: 0.18em;
+        color: var(--accent);
+        text-transform: uppercase;
+        margin-bottom: 0.4rem;
+      }
+      .page-title {
+        font-size: clamp(1.5rem, 3vw, 2.1rem);
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: -0.01em;
+      }
+      .page-title span {
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .page-subtitle {
+        font-family: var(--mono);
+        font-size: 0.74rem;
+        color: var(--text-dim);
+        margin-top: 0.4rem;
+      }
+      .page-subtitle span {
+        color: var(--accent2);
+      }
+
+      .btn-new {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding: 0.65rem 1.5rem;
+        background: linear-gradient(135deg, var(--accent), #0091b5);
+        color: #000;
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 0.85rem;
+        letter-spacing: 0.04em;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        white-space: nowrap;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s;
+      }
+      .btn-new::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, var(--accent2), var(--accent));
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .btn-new:hover::before {
+        opacity: 1;
+      }
+      .btn-new:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0, 210, 255, 0.3);
+      }
+      .btn-new > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ── STAT STRIP ───────────────────────────── */
+      .stat-strip {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.8rem;
+        animation: fadeUp 0.5s ease 0.05s forwards;
+        opacity: 0;
+      }
+      .stat-chip {
+        background: var(--glass);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        padding: 1rem 1.2rem;
+        backdrop-filter: blur(20px);
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        transition: all 0.25s;
+      }
+      .stat-chip:hover {
+        border-color: rgba(0, 210, 255, 0.25);
+        transform: translateY(-2px);
+      }
+      .stat-chip-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 7px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+      }
+      .sc-blue .stat-chip-icon {
+        background: rgba(0, 210, 255, 0.1);
+        color: var(--accent);
+        border: 1px solid rgba(0, 210, 255, 0.2);
+      }
+      .sc-green .stat-chip-icon {
+        background: rgba(0, 255, 157, 0.1);
+        color: var(--accent2);
+        border: 1px solid rgba(0, 255, 157, 0.2);
+      }
+      .sc-red .stat-chip-icon {
+        background: rgba(255, 62, 108, 0.1);
+        color: var(--accent3);
+        border: 1px solid rgba(255, 62, 108, 0.2);
+      }
+      .sc-warn .stat-chip-icon {
+        background: rgba(245, 166, 35, 0.1);
+        color: var(--warn);
+        border: 1px solid rgba(245, 166, 35, 0.2);
+      }
+      .stat-chip-val {
+        font-family: var(--mono);
+        font-size: 1.45rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .sc-blue .stat-chip-val {
+        color: var(--accent);
+      }
+      .sc-green .stat-chip-val {
+        color: var(--accent2);
+      }
+      .sc-red .stat-chip-val {
+        color: var(--accent3);
+      }
+      .sc-warn .stat-chip-val {
+        color: var(--warn);
+      }
+      .stat-chip-lbl {
+        font-size: 0.72rem;
+        color: var(--text-dim);
+        margin-top: 0.15rem;
+      }
+
+      /* ── HISTORY CARD ─────────────────────────── */
+      .history-card {
+        background: var(--glass);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        backdrop-filter: blur(20px);
+        overflow: hidden;
+        animation: fadeUp 0.5s ease 0.1s forwards;
+        opacity: 0;
+      }
+      .history-card:hover {
+        border-color: rgba(0, 210, 255, 0.2);
+      }
+
+      /* ── CARD TOOLBAR ─────────────────────────── */
+      .card-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.2rem 1.6rem;
+        border-bottom: 1px solid var(--border);
+        flex-wrap: wrap;
+        gap: 0.8rem;
+      }
+      .toolbar-left {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+      }
+      .toolbar-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent2);
+        box-shadow: 0 0 8px var(--accent2);
+        animation: blink 1.5s step-start infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+      .toolbar-label {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        color: var(--accent);
+        letter-spacing: 0.1em;
+      }
+
+      .toolbar-right {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        flex-wrap: wrap;
+      }
+      .search-wrap {
+        position: relative;
+      }
+      .search-wrap i {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--muted);
+        font-size: 0.72rem;
+        pointer-events: none;
+      }
+      .search-input {
+        background: rgba(3, 15, 30, 0.6);
+        border: 1px solid rgba(0, 210, 255, 0.1);
+        border-radius: 4px;
+        padding: 0.45rem 0.8rem 0.45rem 2.1rem;
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        outline: none;
+        width: 200px;
+        transition: all 0.25s;
+        caret-color: var(--accent);
+      }
+      .search-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(0, 210, 255, 0.1);
+      }
+      .search-input::placeholder {
+        color: rgba(90, 138, 170, 0.4);
+      }
+
+      .filter-select {
+        background: rgba(3, 15, 30, 0.6);
+        border: 1px solid rgba(0, 210, 255, 0.1);
+        border-radius: 4px;
+        padding: 0.45rem 0.75rem;
+        color: var(--text-dim);
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        outline: none;
+        cursor: pointer;
+        transition: all 0.25s;
+      }
+      .filter-select:focus {
+        border-color: var(--accent);
+      }
+
+      .sort-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.45rem 0.9rem;
+        border-radius: 4px;
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-dim);
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        cursor: pointer;
+        transition: all 0.25s;
+        white-space: nowrap;
+      }
+      .sort-btn:hover {
+        border-color: rgba(0, 210, 255, 0.3);
+        color: var(--accent);
+      }
+
+      /* ── TABLE ────────────────────────────────── */
+      .table-wrap {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      thead tr {
+        border-bottom: 1px solid var(--border);
+        background: rgba(0, 210, 255, 0.025);
+      }
+      th {
+        padding: 0.9rem 1.2rem;
+        font-family: var(--mono);
+        font-size: 0.67rem;
+        letter-spacing: 0.14em;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        text-align: left;
+        white-space: nowrap;
+        cursor: pointer;
+        user-select: none;
+        transition: color 0.2s;
+      }
+      th:hover {
+        color: var(--accent);
+      }
+      th i {
+        margin-left: 0.35rem;
+        font-size: 0.6rem;
+        opacity: 0.5;
+      }
+      th:first-child {
+        padding-left: 1.6rem;
+      }
+      th:last-child {
+        padding-right: 1.6rem;
+      }
+
+      tbody tr {
+        border-bottom: 1px solid rgba(0, 210, 255, 0.04);
+        transition:
+          background 0.2s,
+          transform 0.15s;
+        position: relative;
+      }
+      tbody tr:nth-child(even) {
+        background: rgba(0, 210, 255, 0.015);
+      }
+      tbody tr:last-child {
+        border-bottom: none;
+      }
+      tbody tr:hover {
+        background: rgba(0, 210, 255, 0.05) !important;
+      }
+      tbody tr::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--accent);
+        transform: scaleY(0);
+        transition: transform 0.2s;
+      }
+      tbody tr:hover::before {
+        transform: scaleY(1);
+      }
+
+      td {
+        padding: 0.9rem 1.2rem;
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        color: var(--text);
+        vertical-align: middle;
+      }
+      td:first-child {
+        padding-left: 1.6rem;
+      }
+      td:last-child {
+        padding-right: 1.6rem;
+      }
+
+      /* File name cell */
+      .file-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+      }
+      .file-icon-wrap {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        background: rgba(0, 210, 255, 0.08);
+        color: var(--accent);
+        border: 1px solid rgba(0, 210, 255, 0.15);
+      }
+      .file-name {
+        color: #fff;
+        font-size: 0.8rem;
+      }
+      .file-sub {
+        font-size: 0.67rem;
+        color: var(--text-dim);
+        margin-top: 0.1rem;
+      }
+
+      /* Number cells */
+      .num-cell {
+        font-family: var(--mono);
+      }
+      .num-cell.total {
+        color: var(--accent);
+      }
+      .num-cell.normal {
+        color: var(--accent2);
+      }
+      .num-cell.attack {
+        color: var(--accent3);
+      }
+
+      /* Threat ratio bar */
+      .ratio-wrap {
+        min-width: 100px;
+      }
+      .ratio-bar-bg {
+        height: 5px;
+        background: rgba(0, 255, 157, 0.2);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .ratio-bar-fill {
+        height: 5px;
+        border-radius: 3px;
+        transition: width 0.8s ease;
+      }
+      .ratio-label {
+        font-family: var(--mono);
+        font-size: 0.67rem;
+        color: var(--text-dim);
+        margin-top: 0.25rem;
+      }
+
+      /* Status badge */
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.22rem 0.65rem;
+        border-radius: 3px;
+        font-size: 0.68rem;
+        letter-spacing: 0.06em;
+        font-weight: 600;
+      }
+      .status-badge.clean {
+        background: rgba(0, 255, 157, 0.08);
+        color: var(--accent2);
+        border: 1px solid rgba(0, 255, 157, 0.2);
+      }
+      .status-badge.threat {
+        background: rgba(255, 62, 108, 0.08);
+        color: var(--accent3);
+        border: 1px solid rgba(255, 62, 108, 0.2);
+      }
+      .status-badge.warning {
+        background: rgba(245, 166, 35, 0.08);
+        color: var(--warn);
+        border: 1px solid rgba(245, 166, 35, 0.2);
+      }
+      .status-badge i {
+        font-size: 0.6rem;
+      }
+
+      /* Date cell */
+      .date-main {
+        color: var(--text);
+        font-size: 0.78rem;
+      }
+      .date-time {
+        font-size: 0.67rem;
+        color: var(--text-dim);
+        margin-top: 0.1rem;
+      }
+
+      /* Actions */
+      .actions-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.32rem 0.75rem;
+        border-radius: 3px;
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        letter-spacing: 0.05em;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+        border: 1px solid;
+      }
+      .action-btn.view {
+        border-color: rgba(0, 210, 255, 0.25);
+        color: var(--accent);
+        background: rgba(0, 210, 255, 0.05);
+      }
+      .action-btn.view:hover {
+        background: rgba(0, 210, 255, 0.12);
+        border-color: var(--accent);
+        box-shadow: 0 0 12px rgba(0, 210, 255, 0.2);
+      }
+      .action-btn.delete {
+        border-color: rgba(255, 62, 108, 0.15);
+        color: var(--accent3);
+        background: transparent;
+      }
+      .action-btn.delete:hover {
+        background: rgba(255, 62, 108, 0.08);
+        border-color: rgba(255, 62, 108, 0.4);
+      }
+      .action-btn i {
+        font-size: 0.65rem;
+      }
+
+      /* Empty state */
+      .empty-state {
+        display: none;
+        text-align: center;
+        padding: 4rem 2rem;
+      }
+      .empty-state.show {
+        display: block;
+      }
+      .empty-icon {
+        font-size: 2.5rem;
+        color: var(--text-dim);
+        opacity: 0.3;
+        margin-bottom: 1rem;
+      }
+      .empty-text {
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        color: var(--text-dim);
+      }
+
+      /* ── TABLE FOOTER ─────────────────────────── */
+      .table-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 1.6rem;
+        border-top: 1px solid var(--border);
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+      .table-count {
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        color: var(--text-dim);
+      }
+      .table-count span {
+        color: var(--accent);
+      }
+      .pagination {
+        display: flex;
+        gap: 0.4rem;
+      }
+      .pg-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-dim);
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .pg-btn:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .pg-btn.active {
+        background: rgba(0, 210, 255, 0.12);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .pg-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      /* ── DELETE CONFIRM MODAL ─────────────────── */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        background: rgba(3, 10, 18, 0.8);
+        backdrop-filter: blur(6px);
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-overlay.show {
+        display: flex;
+      }
+      .modal-box {
+        background: #071524;
+        border: 1px solid rgba(255, 62, 108, 0.3);
+        border-radius: 8px;
+        padding: 2rem;
+        max-width: 380px;
+        width: 90%;
+        box-shadow: 0 0 60px rgba(255, 62, 108, 0.1);
+        animation: fadeUp 0.3s ease;
+      }
+      .modal-box::before {
+        content: "";
+        display: block;
+        height: 2px;
+        background: linear-gradient(90deg, var(--accent3), transparent);
+        border-radius: 8px;
+        margin-bottom: 1.4rem;
+      }
+      .modal-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 0.5rem;
+      }
+      .modal-sub {
+        font-family: var(--mono);
+        font-size: 0.76rem;
+        color: var(--text-dim);
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+      }
+      .modal-actions {
+        display: flex;
+        gap: 0.7rem;
+        justify-content: flex-end;
+      }
+      .modal-btn {
+        padding: 0.5rem 1.2rem;
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 0.76rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .modal-btn.cancel {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-dim);
+      }
+      .modal-btn.cancel:hover {
+        border-color: var(--muted);
+        color: var(--text);
+      }
+      .modal-btn.confirm {
+        background: rgba(255, 62, 108, 0.15);
+        border: 1px solid rgba(255, 62, 108, 0.4);
+        color: var(--accent3);
+      }
+      .modal-btn.confirm:hover {
+        background: rgba(255, 62, 108, 0.25);
+      }
+
+      @media (max-width: 900px) {
+        .stat-strip {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 600px) {
+        nav {
+          padding: 0 1.2rem;
+        }
+        .page {
+          padding: 5rem 1rem 3rem;
+        }
+        .stat-strip {
+          grid-template-columns: 1fr 1fr;
+        }
+        .card-toolbar {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .search-input {
+          width: 160px;
+        }
+        .toolbar-right {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── NAVBAR ───────────────────────────────── -->
+    <nav>
+      <a class="nav-brand" href="{{ url_for('home') }}">
+        <div class="shield">IDS</div>
+      </a>
+      <div class="nav-links">
+        <a href="{{ url_for('home') }}" class="nav-pill ghost"
+          ><i class="fa-solid fa-house"></i> Home</a
+        >
+        <a href="{{ url_for('upload') }}" class="nav-pill ghost"
+          ><i class="fa-solid fa-upload"></i> Upload</a
+        >
+        <a href="{{ url_for('history') }}" class="nav-pill ghost active"
+          ><i class="fa-solid fa-clock-rotate-left"></i> History</a
+        >
+        <a href="{{ url_for('logout') }}" class="nav-pill danger"
+          ><i class="fa-solid fa-right-from-bracket"></i> Logout</a
+        >
+      </div>
+    </nav>
+
+    <!-- ── PAGE ─────────────────────────────────── -->
+    <div class="page">
+      <!-- Header -->
+      <div class="page-header">
+        <div>
+          <div class="page-tag">// detection_log</div>
+          <div class="page-title">Detection <span>History</span></div>
+          <div class="page-subtitle">
+            {{ username }}&apos;s scans &nbsp;·&nbsp;
+            <span id="totalScans">{{ total_scans }}</span> records found
+          </div>
+        </div>
+        <a href="{{ url_for('upload') }}" class="btn-new">
+          <i class="fa-solid fa-plus"></i>
+          <span>New Detection</span>
+        </a>
+      </div>
+
+      <!-- Stat strip -->
+      <div class="stat-strip">
+        <div class="stat-chip sc-blue">
+          <div class="stat-chip-icon">
+            <i class="fa-solid fa-folder-open"></i>
+          </div>
+          <div>
+            <div class="stat-chip-val" id="sc-total">{{ total_scans }}</div>
+            <div class="stat-chip-lbl">Total Scans</div>
+          </div>
+        </div>
+        <div class="stat-chip sc-green">
+          <div class="stat-chip-icon">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <div>
+            <div class="stat-chip-val" id="sc-clean">{{ clean_sessions }}</div>
+            <div class="stat-chip-lbl">Clean Sessions</div>
+          </div>
+        </div>
+        <div class="stat-chip sc-red">
+          <div class="stat-chip-icon">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <div>
+            <div class="stat-chip-val" id="sc-threat">
+              {{ threat_sessions }}
+            </div>
+            <div class="stat-chip-lbl">Threat Sessions</div>
+          </div>
+        </div>
+        <div class="stat-chip sc-warn">
+          <div class="stat-chip-icon">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <div class="stat-chip-val" id="sc-records">{{ total_records }}</div>
+            <div class="stat-chip-lbl">Total Records</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- History Table Card -->
+      <div class="history-card">
+        <!-- Toolbar -->
+        <div class="card-toolbar">
+          <div class="toolbar-left">
+            <div class="toolbar-dot"></div>
+            <span class="toolbar-label">SCAN_LOG // LIVE</span>
+          </div>
+          <div class="toolbar-right">
+            <div class="search-wrap">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input
+                class="search-input"
+                id="searchInput"
+                type="text"
+                placeholder="Search filename..."
+              />
+            </div>
+            <select class="filter-select" id="statusFilter">
+              <option value="all">All Status</option>
+              <option value="clean">Clean</option>
+              <option value="threat">Threat</option>
+              <option value="warning">Warning</option>
+            </select>
+            <button class="sort-btn" id="sortDateBtn">
+              <i class="fa-solid fa-arrow-down-wide-short"></i> Date
+            </button>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th><i class="fa-solid fa-file"></i> File Name</th>
+                <th><i class="fa-solid fa-database"></i> Total</th>
+                <th><i class="fa-solid fa-circle-check"></i> Normal</th>
+                <th>
+                  <i class="fa-solid fa-triangle-exclamation"></i> Attacks
+                </th>
+                <th><i class="fa-solid fa-chart-bar"></i> Threat Ratio</th>
+                <th><i class="fa-solid fa-tag"></i> Status</th>
+                <th><i class="fa-regular fa-calendar"></i> Date</th>
+                <th><i class="fa-solid fa-gear"></i> Actions</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon">
+              <i class="fa-solid fa-folder-open"></i>
+            </div>
+            <div class="empty-text">
+              // NO_RECORDS_FOUND — try a different search
+            </div>
+          </div>
+        </div>
+
+        <div class="table-footer">
+          <div class="table-count">
+            Showing <span id="showCount">0</span> of
+            <span id="totalCount">0</span> sessions
+          </div>
+          <div class="pagination" id="pagination"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DELETE MODAL ──────────────────────────── -->
+    <div class="modal-overlay" id="deleteModal">
+      <div class="modal-box">
+        <div class="modal-title">Delete Session?</div>
+        <div class="modal-sub">
+          This will permanently remove the scan record and its associated
+          results. This action cannot be undone.
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn cancel" onclick="closeModal()">
+            Cancel
+          </button>
+          <button class="modal-btn confirm" onclick="confirmDelete()">
+            <i class="fa-solid fa-trash"></i> Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ── REAL DATA FROM FLASK DATABASE ─────────────────────────────────
+      const rawData = {{ history | tojson }};
+
+      // Parse scanned_at string into JS Date for each row
+      rawData.forEach(r => {
+        r.date    = new Date(r.scanned_at);
+        r.name    = r.filename;
+        r.total   = r.total_records;
+        r.normal  = r.normal_count;
+        r.attacks = r.attack_count;
+        r.ratio   = r.total_records > 0 ? r.attack_count / r.total_records : 0;
+      });
+
+      function formatDate(d){
+        return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+      }
+      function formatTime(d){
+        return d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      }
+
+      // ── TABLE LOGIC ────────────────────────────────────────────────────
+      const ROWS = 8;
+      let page=1, filtered=[...rawData], sortAsc=false;
+
+      function statusIcon(s){
+        if(s==='clean')   return '<i class="fa-solid fa-circle-check"></i>';
+        if(s==='threat')  return '<i class="fa-solid fa-triangle-exclamation"></i>';
+        return '<i class="fa-solid fa-circle-exclamation"></i>';
+      }
+      function statusLabel(s){
+        return s.charAt(0).toUpperCase()+s.slice(1);
+      }
+      function ratioColor(r){
+        if(r===0)    return 'var(--accent2)';
+        if(r<0.15)   return 'var(--warn)';
+        return 'var(--accent3)';
+      }
+
+      function render(){
+        const tbody = document.getElementById('historyBody');
+        const empty = document.getElementById('emptyState');
+        const start = (page-1)*ROWS;
+        const slice = filtered.slice(start, start+ROWS);
+
+        if(!filtered.length){
+          tbody.innerHTML='';
+          empty.classList.add('show');
+        } else {
+          empty.classList.remove('show');
+          tbody.innerHTML = slice.map(r=>`
+            <tr>
+              <td>
+                <div class="file-cell">
+                  <div class="file-icon-wrap"><i class="fa-solid fa-file-csv"></i></div>
+                  <div>
+                    <div class="file-name">${r.name}</div>
+                    <div class="file-sub">ID #${String(r.id).padStart(4,'0')}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="num-cell total">${r.total.toLocaleString()}</td>
+              <td class="num-cell normal">${r.normal.toLocaleString()}</td>
+              <td class="num-cell attack">${r.attacks.toLocaleString()}</td>
+              <td>
+                <div class="ratio-wrap">
+                  <div class="ratio-bar-bg">
+                    <div class="ratio-bar-fill" style="width:${(r.ratio*100).toFixed(1)}%;background:${ratioColor(r.ratio)}"></div>
+                  </div>
+                  <div class="ratio-label">${(r.ratio*100).toFixed(1)}% threat</div>
+                </div>
+              </td>
+              <td><span class="status-badge ${r.status}">${statusIcon(r.status)} ${statusLabel(r.status)}</span></td>
+              <td>
+                <div class="date-main">${formatDate(r.date)}</div>
+                <div class="date-time">${formatTime(r.date)}</div>
+              </td>
+              <td>
+                <div class="actions-cell">
+                  <a href="{{ url_for('results') }}" class="action-btn view">
+                    <i class="fa-solid fa-eye"></i> View
+                  </a>
+                </div>
+              </td>
+            </tr>
+          `).join('');
+        }
+
+        document.getElementById('showCount').textContent  = filtered.length;
+        document.getElementById('totalCount').textContent = filtered.length;
+        renderPagination();
+      }
+
+      function renderPagination(){
+        const total = Math.ceil(filtered.length/ROWS);
+        const pg = document.getElementById('pagination');
+        let html='';
+        html+=`<button class="pg-btn" onclick="goPage(${page-1})" ${page===1?'disabled':''}>
+                 <i class="fa-solid fa-chevron-left" style="font-size:.6rem"></i></button>`;
+        for(let i=1;i<=total;i++){
+          if(i<=2||i===total||Math.abs(i-page)<=1){
+            html+=`<button class="pg-btn${i===page?' active':''}" onclick="goPage(${i})">${i}</button>`;
+          } else if((i===3&&page>4)||(i===total-1&&page<total-3)){
+            html+=`<span class="pg-btn" style="cursor:default;border:none">…</span>`;
+          }
+        }
+        html+=`<button class="pg-btn" onclick="goPage(${page+1})" ${page===total||!total?'disabled':''}>
+                 <i class="fa-solid fa-chevron-right" style="font-size:.6rem"></i></button>`;
+        pg.innerHTML=html;
+      }
+
+      function goPage(p){
+        const max=Math.ceil(filtered.length/ROWS);
+        if(p<1||p>max)return;
+        page=p; render();
+      }
+
+      function applyFilters(){
+        const q   = document.getElementById('searchInput').value.toLowerCase();
+        const cat = document.getElementById('statusFilter').value;
+        filtered = rawData.filter(r=>{
+          const mQ  = !q || r.name.toLowerCase().includes(q);
+          const mC  = cat==='all' || r.status===cat;
+          return mQ && mC;
+        });
+        if(sortAsc) filtered.sort((a,b)=>a.date-b.date);
+        else filtered.sort((a,b)=>b.date-a.date);
+        page=1; render();
+      }
+
+      document.getElementById('searchInput').addEventListener('input', applyFilters);
+      document.getElementById('statusFilter').addEventListener('change', applyFilters);
+      document.getElementById('sortDateBtn').addEventListener('click', ()=>{
+        sortAsc=!sortAsc;
+        document.getElementById('sortDateBtn').innerHTML=
+          `<i class="fa-solid fa-arrow-${sortAsc?'up':'down'}-wide-short"></i> Date`;
+        applyFilters();
+      });
+
+      // Initial render (newest first — already ordered by DB query)
+      filtered=[...rawData];
+      render();
+    </script>
+  </body>
+</html>

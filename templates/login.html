@@ -1,0 +1,895 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IDS — Secure Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        --bg: #030a12;
+        --surface: #071524;
+        --glass: rgba(7, 28, 54, 0.55);
+        --border: rgba(0, 210, 255, 0.12);
+        --accent: #00d2ff;
+        --accent2: #00ff9d;
+        --accent3: #ff3e6c;
+        --muted: #3a6a8a;
+        --text: #c8e6f5;
+        --text-dim: #5a8aaa;
+        --mono: "Share Tech Mono", monospace;
+        --display: "Syne", sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--display);
+        min-height: 100vh;
+        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Grid overlay */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(0, 210, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 210, 255, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* Scanlines */
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.15) 2px,
+          rgba(0, 0, 0, 0.15) 4px
+        );
+        pointer-events: none;
+        z-index: 999;
+        opacity: 0.35;
+      }
+
+      /* ── NAVBAR ───────────────────────────────── */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 2.5rem;
+        height: 64px;
+        background: rgba(3, 10, 18, 0.85);
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        text-decoration: none;
+      }
+      .nav-brand .shield {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        clip-path: polygon(
+          50% 0%,
+          100% 25%,
+          100% 75%,
+          50% 100%,
+          0% 75%,
+          0% 25%
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        color: #000;
+        font-weight: 900;
+        animation: shieldPulse 3s ease-in-out infinite;
+        flex-shrink: 0;
+        font-family: var(--display);
+      }
+      @keyframes shieldPulse {
+        0%,
+        100% {
+          filter: drop-shadow(0 0 6px var(--accent));
+        }
+        50% {
+          filter: drop-shadow(0 0 18px var(--accent2));
+        }
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      .nav-pill {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.4rem 1.1rem;
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        letter-spacing: 0.06em;
+        text-decoration: none;
+        transition: all 0.25s;
+      }
+      .nav-pill.ghost {
+        border: 1px solid var(--border);
+        color: var(--accent);
+        background: transparent;
+      }
+      .nav-pill.ghost:hover {
+        background: rgba(0, 210, 255, 0.08);
+        border-color: var(--accent);
+        box-shadow: 0 0 16px rgba(0, 210, 255, 0.2);
+      }
+      .nav-pill.filled {
+        border: 1px solid var(--accent2);
+        background: rgba(0, 255, 157, 0.08);
+        color: var(--accent2);
+      }
+      .nav-pill.filled:hover {
+        background: rgba(0, 255, 157, 0.18);
+        box-shadow: 0 0 20px rgba(0, 255, 157, 0.25);
+      }
+
+      /* ── PAGE LAYOUT ──────────────────────────── */
+      .page-wrap {
+        position: relative;
+        z-index: 1;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6rem 1.5rem 3rem;
+        min-height: 100vh;
+      }
+
+      /* Background glow blob */
+      .page-wrap::before {
+        content: "";
+        position: absolute;
+        top: 30%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 600px;
+        height: 500px;
+        background: radial-gradient(
+          ellipse,
+          rgba(0, 210, 255, 0.09) 0%,
+          rgba(0, 255, 157, 0.04) 45%,
+          transparent 70%
+        );
+        pointer-events: none;
+        animation: blobDrift 8s ease-in-out infinite alternate;
+      }
+      @keyframes blobDrift {
+        from {
+          transform: translateX(-55%) scaleY(1);
+        }
+        to {
+          transform: translateX(-45%) scaleY(1.1);
+        }
+      }
+
+      /* ── LOGIN CARD ───────────────────────────── */
+      .login-card {
+        position: relative;
+        width: 100%;
+        max-width: 440px;
+        background: var(--glass);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 2.8rem 2.5rem;
+        backdrop-filter: blur(24px);
+        box-shadow:
+          0 32px 80px rgba(0, 0, 0, 0.5),
+          0 0 0 1px rgba(0, 210, 255, 0.05);
+        animation: cardReveal 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+      }
+      @keyframes cardReveal {
+        from {
+          opacity: 0;
+          transform: translateY(28px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      /* top accent bar */
+      .login-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        border-radius: 10px 10px 0 0;
+        background: linear-gradient(
+          90deg,
+          var(--accent),
+          var(--accent2),
+          transparent
+        );
+      }
+
+      /* corner glow */
+      .login-card::after {
+        content: "";
+        position: absolute;
+        bottom: -40px;
+        right: -40px;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: var(--accent);
+        opacity: 0.04;
+        pointer-events: none;
+      }
+
+      /* ── CARD HEADER ──────────────────────────── */
+      .card-header {
+        text-align: center;
+        margin-bottom: 2.2rem;
+      }
+      /* ── CARD ILLUSTRATION ────────────────────── */
+      .card-illustration {
+        margin: 0 auto 1.1rem;
+        width: 100%;
+        max-width: 320px;
+        background: rgba(0, 210, 255, 0.03);
+        border: 1px solid rgba(0, 210, 255, 0.1);
+        border-radius: 8px;
+        padding: 0.6rem 0.4rem 0.4rem;
+        position: relative;
+        overflow: hidden;
+      }
+      .card-illustration::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at 50% 60%,
+          rgba(0, 210, 255, 0.07),
+          transparent 70%
+        );
+        pointer-events: none;
+      }
+      .ids-svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+      .pulse-ring.r1 {
+        animation: pulseRing 2.4s ease-out infinite;
+      }
+      .pulse-ring.r2 {
+        animation: pulseRing 2.4s ease-out infinite 0.6s;
+      }
+      @keyframes pulseRing {
+        0% {
+          r: 24;
+          opacity: 0.4;
+        }
+        100% {
+          r: 38;
+          opacity: 0;
+        }
+      }
+      .card-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: -0.01em;
+        margin-bottom: 0.4rem;
+      }
+      .card-sub {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        color: var(--text-dim);
+        letter-spacing: 0.1em;
+      }
+      .card-sub span {
+        color: var(--accent);
+      }
+
+      /* ── ERROR ALERT ──────────────────────────── */
+      .alert-error {
+        display: none; /* shown via JS or Flask: remove display:none */
+        align-items: center;
+        gap: 0.6rem;
+        background: rgba(255, 62, 108, 0.08);
+        border: 1px solid rgba(255, 62, 108, 0.3);
+        border-radius: 4px;
+        padding: 0.7rem 1rem;
+        margin-bottom: 1.4rem;
+        font-family: var(--mono);
+        font-size: 0.76rem;
+        color: var(--accent3);
+        animation: shake 0.35s ease;
+      }
+      .alert-error.show {
+        display: flex;
+      }
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        25% {
+          transform: translateX(-6px);
+        }
+        75% {
+          transform: translateX(6px);
+        }
+      }
+
+      /* ── FORM ─────────────────────────────────── */
+      .form-group {
+        margin-bottom: 1.3rem;
+      }
+      .form-label {
+        display: block;
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.12em;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+      }
+
+      .input-wrap {
+        position: relative;
+      }
+      .input-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--muted);
+        font-size: 0.82rem;
+        transition: color 0.25s;
+        pointer-events: none;
+      }
+      .input-wrap:focus-within .input-icon {
+        color: var(--accent);
+      }
+
+      .form-input {
+        width: 100%;
+        background: rgba(3, 15, 30, 0.6);
+        border: 1px solid rgba(0, 210, 255, 0.12);
+        border-radius: 5px;
+        padding: 0.8rem 2.8rem 0.8rem 2.6rem;
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 0.88rem;
+        outline: none;
+        transition:
+          border-color 0.25s,
+          box-shadow 0.25s,
+          background 0.25s;
+        caret-color: var(--accent);
+      }
+      .form-input::placeholder {
+        color: rgba(90, 138, 170, 0.5);
+      }
+      .form-input:focus {
+        border-color: var(--accent);
+        background: rgba(0, 210, 255, 0.04);
+        box-shadow:
+          0 0 0 3px rgba(0, 210, 255, 0.1),
+          0 0 20px rgba(0, 210, 255, 0.08);
+      }
+
+      .toggle-pw {
+        position: absolute;
+        right: 0.9rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-dim);
+        font-size: 0.82rem;
+        cursor: pointer;
+        padding: 0.2rem;
+        transition: color 0.2s;
+        background: none;
+        border: none;
+        outline: none;
+      }
+      .toggle-pw:hover {
+        color: var(--accent);
+      }
+
+      /* ── FORGOT ───────────────────────────────── */
+      .forgot-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: -0.5rem;
+        margin-bottom: 1.6rem;
+      }
+      .forgot-link {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        color: var(--text-dim);
+        text-decoration: none;
+        letter-spacing: 0.05em;
+        transition: color 0.2s;
+      }
+      .forgot-link:hover {
+        color: var(--accent);
+      }
+
+      /* ── LOGIN BUTTON ─────────────────────────── */
+      .btn-login {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+        padding: 0.9rem;
+        background: linear-gradient(135deg, var(--accent), #0091b5);
+        color: #000;
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 0.95rem;
+        letter-spacing: 0.05em;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        transition:
+          transform 0.25s,
+          box-shadow 0.25s;
+      }
+      .btn-login::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, var(--accent2), var(--accent));
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .btn-login:hover::before {
+        opacity: 1;
+      }
+      .btn-login:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 36px rgba(0, 210, 255, 0.35);
+      }
+      .btn-login:active {
+        transform: translateY(0);
+      }
+      .btn-login > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ── DIVIDER ──────────────────────────────── */
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin: 1.6rem 0;
+      }
+      .divider-line {
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+      }
+      .divider-text {
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        color: var(--text-dim);
+        letter-spacing: 0.1em;
+        white-space: nowrap;
+      }
+
+      /* ── SIGNUP LINK ──────────────────────────── */
+      .signup-row {
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        color: var(--text-dim);
+      }
+      .signup-row a {
+        color: var(--accent2);
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.2s;
+        border-bottom: 1px solid rgba(0, 255, 157, 0.2);
+        padding-bottom: 1px;
+      }
+      .signup-row a:hover {
+        color: #fff;
+        border-color: rgba(0, 255, 157, 0.6);
+      }
+
+      @media (max-width: 480px) {
+        nav {
+          padding: 0 1.2rem;
+        }
+        .login-card {
+          padding: 2rem 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── NAVBAR ───────────────────────────────── -->
+    <nav>
+      <a class="nav-brand" href="/">
+        <div class="shield">IDS</div>
+      </a>
+      <div class="nav-links">
+        <a href="/" class="nav-pill ghost"
+          ><i class="fa-solid fa-house"></i> Home</a
+        >
+        <a href="/signup" class="nav-pill filled"
+          ><i class="fa-solid fa-user-plus"></i> Sign Up</a
+        >
+      </div>
+    </nav>
+
+    <!-- ── MAIN ─────────────────────────────────── -->
+    <div class="page-wrap">
+      <div class="login-card">
+        <!-- Header Illustration -->
+        <div class="card-header">
+          <div class="card-illustration">
+            <svg
+              viewBox="0 0 320 120"
+              xmlns="http://www.w3.org/2000/svg"
+              class="ids-svg"
+            >
+              <circle
+                cx="160"
+                cy="60"
+                r="18"
+                fill="none"
+                stroke="#00d2ff"
+                stroke-width="1.5"
+                opacity="0.9"
+              />
+              <circle
+                cx="160"
+                cy="60"
+                r="11"
+                fill="rgba(0,210,255,0.12)"
+                stroke="#00d2ff"
+                stroke-width="1"
+                opacity="0.8"
+              />
+              <circle cx="160" cy="60" r="4" fill="#00d2ff" />
+              <circle
+                cx="160"
+                cy="60"
+                r="24"
+                fill="none"
+                stroke="#00d2ff"
+                stroke-width="0.8"
+                opacity="0.4"
+                class="pulse-ring r1"
+              />
+              <circle
+                cx="160"
+                cy="60"
+                r="32"
+                fill="none"
+                stroke="#00d2ff"
+                stroke-width="0.5"
+                opacity="0.2"
+                class="pulse-ring r2"
+              />
+              <circle
+                cx="72"
+                cy="38"
+                r="6"
+                fill="rgba(0,210,255,0.15)"
+                stroke="#00d2ff"
+                stroke-width="1.2"
+              />
+              <circle cx="72" cy="38" r="2.5" fill="#00d2ff" opacity="0.8" />
+              <circle
+                cx="52"
+                cy="80"
+                r="5"
+                fill="rgba(0,255,157,0.12)"
+                stroke="#00ff9d"
+                stroke-width="1.2"
+              />
+              <circle cx="52" cy="80" r="2" fill="#00ff9d" opacity="0.8" />
+              <circle
+                cx="100"
+                cy="98"
+                r="5"
+                fill="rgba(0,210,255,0.1)"
+                stroke="#00d2ff"
+                stroke-width="1"
+              />
+              <circle cx="100" cy="98" r="2" fill="#00d2ff" opacity="0.6" />
+              <circle
+                cx="248"
+                cy="38"
+                r="6"
+                fill="rgba(0,255,157,0.15)"
+                stroke="#00ff9d"
+                stroke-width="1.2"
+              />
+              <circle cx="248" cy="38" r="2.5" fill="#00ff9d" opacity="0.8" />
+              <circle
+                cx="268"
+                cy="80"
+                r="5"
+                fill="rgba(0,210,255,0.12)"
+                stroke="#00d2ff"
+                stroke-width="1.2"
+              />
+              <circle cx="268" cy="80" r="2" fill="#00d2ff" opacity="0.8" />
+              <circle
+                cx="220"
+                cy="98"
+                r="5"
+                fill="rgba(255,62,108,0.15)"
+                stroke="#ff3e6c"
+                stroke-width="1"
+              />
+              <circle cx="220" cy="98" r="2" fill="#ff3e6c" opacity="0.7" />
+              <line
+                x1="72"
+                y1="38"
+                x2="142"
+                y2="55"
+                stroke="#00d2ff"
+                stroke-width="0.8"
+                opacity="0.35"
+              />
+              <line
+                x1="52"
+                y1="80"
+                x2="142"
+                y2="62"
+                stroke="#00ff9d"
+                stroke-width="0.8"
+                opacity="0.3"
+              />
+              <line
+                x1="100"
+                y1="98"
+                x2="148"
+                y2="70"
+                stroke="#00d2ff"
+                stroke-width="0.6"
+                opacity="0.25"
+              />
+              <line
+                x1="72"
+                y1="38"
+                x2="52"
+                y2="80"
+                stroke="#00d2ff"
+                stroke-width="0.5"
+                opacity="0.2"
+              />
+              <line
+                x1="248"
+                y1="38"
+                x2="178"
+                y2="55"
+                stroke="#00ff9d"
+                stroke-width="0.8"
+                opacity="0.35"
+              />
+              <line
+                x1="268"
+                y1="80"
+                x2="178"
+                y2="62"
+                stroke="#00d2ff"
+                stroke-width="0.8"
+                opacity="0.3"
+              />
+              <line
+                x1="220"
+                y1="98"
+                x2="172"
+                y2="70"
+                stroke="#ff3e6c"
+                stroke-width="0.8"
+                opacity="0.35"
+                stroke-dasharray="3,2"
+              />
+              <line
+                x1="248"
+                y1="38"
+                x2="268"
+                y2="80"
+                stroke="#00ff9d"
+                stroke-width="0.5"
+                opacity="0.2"
+              />
+              <circle r="3" fill="#ff3e6c" opacity="0.9">
+                <animateMotion
+                  dur="2.4s"
+                  repeatCount="indefinite"
+                  path="M220,98 L160,60"
+                />
+                <animate
+                  attributeName="opacity"
+                  values="0;1;1;0"
+                  dur="2.4s"
+                  repeatCount="indefinite"
+                />
+              </circle>
+              <circle r="2.5" fill="#00ff9d" opacity="0.8">
+                <animateMotion
+                  dur="2s"
+                  repeatCount="indefinite"
+                  begin="0.6s"
+                  path="M72,38 L160,60"
+                />
+                <animate
+                  attributeName="opacity"
+                  values="0;1;1;0"
+                  dur="2s"
+                  repeatCount="indefinite"
+                  begin="0.6s"
+                />
+              </circle>
+              <text
+                x="160"
+                y="64"
+                text-anchor="middle"
+                font-size="8"
+                fill="#030a12"
+                font-family="sans-serif"
+                font-weight="900"
+              >
+                IDS
+              </text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Flask error message -->
+        {% if error %}
+        <div class="alert-error show" id="loginError">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>{{ error }}</span>
+        </div>
+        {% else %}
+        <div class="alert-error" id="loginError">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>Invalid credentials. Access denied.</span>
+        </div>
+        {% endif %}
+
+        <!-- Form -->
+        <form method="POST" action="{{ url_for('login') }}">
+          <!-- Email -->
+          <div class="form-group">
+            <label class="form-label" for="email">Email Address</label>
+            <div class="input-wrap">
+              <i class="fa-solid fa-envelope input-icon"></i>
+              <input
+                class="form-input"
+                type="email"
+                id="email"
+                name="email"
+                placeholder="user@domain.com"
+                autocomplete="email"
+                required
+              />
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <div class="input-wrap">
+              <i class="fa-solid fa-key input-icon"></i>
+              <input
+                class="form-input"
+                type="password"
+                id="password"
+                name="password"
+                placeholder="••••••••••••"
+                autocomplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                class="toggle-pw"
+                id="togglePw"
+                aria-label="Toggle password visibility"
+              >
+                <i class="fa-solid fa-eye" id="eyeIcon"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Forgot Password -->
+          <div class="forgot-row">
+            <a href="/forgot-password" class="forgot-link">Forgot password?</a>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="btn-login">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>Login</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+
+        <div class="divider">
+          <div class="divider-line"></div>
+          <span class="divider-text">NO ACCOUNT?</span>
+          <div class="divider-line"></div>
+        </div>
+
+        <div class="signup-row">
+          Don't have an account? &nbsp;<a href="/signup">Sign up here</a>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Show/hide password toggle
+      const togglePw = document.getElementById("togglePw");
+      const pwInput = document.getElementById("password");
+      const eyeIcon = document.getElementById("eyeIcon");
+
+      togglePw.addEventListener("click", () => {
+        const isHidden = pwInput.type === "password";
+        pwInput.type = isHidden ? "text" : "password";
+        eyeIcon.className = isHidden
+          ? "fa-solid fa-eye-slash"
+          : "fa-solid fa-eye";
+      });
+
+      // Flask usage: to show error, add/remove the "show" class on #loginError
+      // e.g. in Jinja: {% if error %} document.getElementById('loginError').classList.add('show') {% endif %}
+    </script>
+  </body>
+</html>

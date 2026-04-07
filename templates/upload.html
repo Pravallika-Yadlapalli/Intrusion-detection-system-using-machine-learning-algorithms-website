@@ -1,0 +1,1026 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IDS — Upload Traffic Data</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        --bg: #030a12;
+        --glass: rgba(7, 28, 54, 0.55);
+        --border: rgba(0, 210, 255, 0.12);
+        --accent: #00d2ff;
+        --accent2: #00ff9d;
+        --accent3: #ff3e6c;
+        --muted: #3a6a8a;
+        --text: #c8e6f5;
+        --text-dim: #5a8aaa;
+        --mono: "Share Tech Mono", monospace;
+        --display: "Syne", sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--display);
+        min-height: 100vh;
+        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Grid overlay */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(0, 210, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 210, 255, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* Scanlines */
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.15) 2px,
+          rgba(0, 0, 0, 0.15) 4px
+        );
+        pointer-events: none;
+        z-index: 999;
+        opacity: 0.35;
+      }
+
+      /* ── NAVBAR ───────────────────────────────── */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 2.5rem;
+        height: 64px;
+        background: rgba(3, 10, 18, 0.85);
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid var(--border);
+      }
+      .nav-brand {
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+      }
+      .nav-brand .shield {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        clip-path: polygon(
+          50% 0%,
+          100% 25%,
+          100% 75%,
+          50% 100%,
+          0% 75%,
+          0% 25%
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        color: #000;
+        font-weight: 900;
+        font-family: var(--display);
+        animation: shieldPulse 3s ease-in-out infinite;
+      }
+      @keyframes shieldPulse {
+        0%,
+        100% {
+          filter: drop-shadow(0 0 6px var(--accent));
+        }
+        50% {
+          filter: drop-shadow(0 0 18px var(--accent2));
+        }
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      .nav-pill {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.4rem 1.1rem;
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        letter-spacing: 0.06em;
+        text-decoration: none;
+        transition: all 0.25s;
+      }
+      .nav-pill.ghost {
+        border: 1px solid var(--border);
+        color: var(--accent);
+        background: transparent;
+      }
+      .nav-pill.ghost:hover {
+        background: rgba(0, 210, 255, 0.08);
+        border-color: var(--accent);
+        box-shadow: 0 0 16px rgba(0, 210, 255, 0.2);
+      }
+      .nav-pill.filled {
+        border: 1px solid var(--accent2);
+        background: rgba(0, 255, 157, 0.08);
+        color: var(--accent2);
+      }
+      .nav-pill.filled:hover {
+        background: rgba(0, 255, 157, 0.18);
+        box-shadow: 0 0 20px rgba(0, 255, 157, 0.25);
+      }
+
+      /* ── PAGE LAYOUT ──────────────────────────── */
+      .page-wrap {
+        position: relative;
+        z-index: 1;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 5.5rem 1.5rem 3rem;
+        min-height: 100vh;
+      }
+      .page-wrap::before {
+        content: "";
+        position: absolute;
+        top: 25%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 700px;
+        height: 500px;
+        background: radial-gradient(
+          ellipse,
+          rgba(0, 210, 255, 0.08) 0%,
+          rgba(0, 255, 157, 0.04) 45%,
+          transparent 70%
+        );
+        pointer-events: none;
+        animation: blobDrift 8s ease-in-out infinite alternate;
+      }
+      @keyframes blobDrift {
+        from {
+          transform: translateX(-55%) scaleY(1);
+        }
+        to {
+          transform: translateX(-45%) scaleY(1.1);
+        }
+      }
+
+      /* ── UPLOAD CARD ──────────────────────────── */
+      .upload-card {
+        position: relative;
+        width: 100%;
+        max-width: 560px;
+        background: var(--glass);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 2.4rem 2.4rem 2rem;
+        backdrop-filter: blur(24px);
+        box-shadow:
+          0 32px 80px rgba(0, 0, 0, 0.5),
+          0 0 0 1px rgba(0, 210, 255, 0.04);
+        animation: cardReveal 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+      }
+      @keyframes cardReveal {
+        from {
+          opacity: 0;
+          transform: translateY(28px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      .upload-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        border-radius: 10px 10px 0 0;
+        background: linear-gradient(
+          90deg,
+          var(--accent),
+          var(--accent2),
+          transparent
+        );
+      }
+      .upload-card::after {
+        content: "";
+        position: absolute;
+        bottom: -40px;
+        right: -40px;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: var(--accent);
+        opacity: 0.04;
+        pointer-events: none;
+      }
+
+      /* ── STATUS BAR ───────────────────────────── */
+      .status-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.6rem;
+        padding-bottom: 1.2rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .status-left {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+      }
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent2);
+        box-shadow: 0 0 8px var(--accent2);
+        animation: blink 1.4s step-start infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+      .status-text {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        color: var(--accent2);
+        letter-spacing: 0.1em;
+      }
+      .status-right {
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        color: var(--text-dim);
+        letter-spacing: 0.07em;
+      }
+
+      /* ── DROP ZONE ────────────────────────────── */
+      .drop-zone {
+        position: relative;
+        border: 1.5px dashed rgba(0, 210, 255, 0.25);
+        border-radius: 8px;
+        padding: 2.4rem 1.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: rgba(0, 210, 255, 0.02);
+        margin-bottom: 1.4rem;
+        overflow: hidden;
+      }
+      .drop-zone::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at 50% 50%,
+          rgba(0, 210, 255, 0.06),
+          transparent 70%
+        );
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .drop-zone:hover,
+      .drop-zone.dragover {
+        border-color: var(--accent);
+        background: rgba(0, 210, 255, 0.05);
+        box-shadow:
+          0 0 30px rgba(0, 210, 255, 0.08),
+          inset 0 0 30px rgba(0, 210, 255, 0.03);
+      }
+      .drop-zone:hover::before,
+      .drop-zone.dragover::before {
+        opacity: 1;
+      }
+
+      /* Corner accents on drop zone */
+      .drop-zone .corner {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border-color: rgba(0, 210, 255, 0.4);
+        border-style: solid;
+        transition: border-color 0.3s;
+      }
+      .drop-zone:hover .corner,
+      .drop-zone.dragover .corner {
+        border-color: var(--accent);
+      }
+      .corner.tl {
+        top: 8px;
+        left: 8px;
+        border-width: 1.5px 0 0 1.5px;
+      }
+      .corner.tr {
+        top: 8px;
+        right: 8px;
+        border-width: 1.5px 1.5px 0 0;
+      }
+      .corner.bl {
+        bottom: 8px;
+        left: 8px;
+        border-width: 0 0 1.5px 1.5px;
+      }
+      .corner.br {
+        bottom: 8px;
+        right: 8px;
+        border-width: 0 1.5px 1.5px 0;
+      }
+
+      .drop-icon-wrap {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 1rem;
+      }
+      .drop-icon-ring {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        border: 1px solid rgba(0, 210, 255, 0.2);
+        animation: ringPulse 2.5s ease-in-out infinite;
+      }
+      @keyframes ringPulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 0.5;
+        }
+        50% {
+          transform: scale(1.15);
+          opacity: 0.15;
+        }
+      }
+      .drop-icon-inner {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: linear-gradient(
+          135deg,
+          rgba(0, 210, 255, 0.12),
+          rgba(0, 255, 157, 0.06)
+        );
+        border: 1px solid rgba(0, 210, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        color: var(--accent);
+        transition: all 0.3s;
+      }
+      .drop-zone:hover .drop-icon-inner,
+      .drop-zone.dragover .drop-icon-inner {
+        background: linear-gradient(
+          135deg,
+          rgba(0, 210, 255, 0.2),
+          rgba(0, 255, 157, 0.1)
+        );
+        box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);
+        transform: translateY(-3px);
+      }
+
+      .drop-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 0.35rem;
+      }
+      .drop-sub {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        color: var(--text-dim);
+        margin-bottom: 1.2rem;
+        line-height: 1.6;
+      }
+      .drop-sub span {
+        color: var(--accent);
+      }
+
+      /* Hidden real input */
+      #fileInput {
+        display: none;
+      }
+
+      .btn-choose {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.55rem 1.4rem;
+        background: transparent;
+        border: 1px solid rgba(0, 210, 255, 0.3);
+        border-radius: 4px;
+        color: var(--accent);
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        transition: all 0.25s;
+      }
+      .btn-choose:hover {
+        background: rgba(0, 210, 255, 0.08);
+        border-color: var(--accent);
+        box-shadow: 0 0 16px rgba(0, 210, 255, 0.2);
+      }
+
+      /* ── FILE INFO STRIP ──────────────────────── */
+      .file-info {
+        display: none;
+        align-items: center;
+        gap: 0.8rem;
+        background: rgba(0, 255, 157, 0.05);
+        border: 1px solid rgba(0, 255, 157, 0.18);
+        border-radius: 5px;
+        padding: 0.7rem 1rem;
+        margin-bottom: 1.4rem;
+        animation: fadeIn 0.25s ease;
+      }
+      .file-info.show {
+        display: flex;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-5px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      .file-info-icon {
+        font-size: 1.1rem;
+        color: var(--accent2);
+        flex-shrink: 0;
+      }
+      .file-info-meta {
+        flex: 1;
+        min-width: 0;
+      }
+      .file-info-name {
+        font-family: var(--mono);
+        font-size: 0.82rem;
+        color: #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .file-info-size {
+        font-family: var(--mono);
+        font-size: 0.67rem;
+        color: var(--text-dim);
+        margin-top: 0.15rem;
+      }
+      .file-info-remove {
+        background: none;
+        border: none;
+        color: var(--text-dim);
+        font-size: 0.8rem;
+        cursor: pointer;
+        padding: 0.2rem;
+        transition: color 0.2s;
+        flex-shrink: 0;
+      }
+      .file-info-remove:hover {
+        color: var(--accent3);
+      }
+
+      /* ── INSTRUCTIONS ─────────────────────────── */
+      .instructions {
+        background: rgba(0, 210, 255, 0.03);
+        border: 1px solid rgba(0, 210, 255, 0.1);
+        border-radius: 5px;
+        padding: 0.9rem 1rem;
+        margin-bottom: 1.4rem;
+      }
+      .instr-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        color: var(--accent);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 0.6rem;
+      }
+      .instr-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+      }
+      .instr-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.55rem;
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        color: var(--text-dim);
+        line-height: 1.5;
+      }
+      .instr-list li i {
+        color: var(--accent2);
+        font-size: 0.65rem;
+        margin-top: 0.18rem;
+        flex-shrink: 0;
+      }
+
+      /* ── REQUIRED FEATURES NOTE ───────────────── */
+      .features-note {
+        position: relative;
+        background: rgba(245, 166, 35, 0.04);
+        border: 1px solid rgba(245, 166, 35, 0.22);
+        border-left: 3px solid rgba(245, 166, 35, 0.7);
+        border-radius: 5px;
+        padding: 0.95rem 1rem 0.95rem 1rem;
+        margin-bottom: 1.4rem;
+        overflow: hidden;
+      }
+      .features-note::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(
+          ellipse at 0% 50%,
+          rgba(245, 166, 35, 0.06),
+          transparent 60%
+        );
+        pointer-events: none;
+      }
+      .features-note-title {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        color: #f5a623;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 0.6rem;
+        font-weight: 600;
+      }
+      .features-note-title i {
+        font-size: 0.8rem;
+      }
+      .features-note-body {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        color: var(--text-dim);
+        line-height: 1.6;
+        margin-bottom: 0.65rem;
+      }
+      .features-note-body strong {
+        color: var(--text);
+      }
+      .features-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+      .feature-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        padding: 0.22rem 0.6rem;
+        background: rgba(245, 166, 35, 0.08);
+        border: 1px solid rgba(245, 166, 35, 0.25);
+        border-radius: 3px;
+        color: #f5a623;
+        letter-spacing: 0.04em;
+      }
+      .feature-pill i {
+        font-size: 0.6rem;
+      }
+
+      /* ── ERROR ALERT ──────────────────────────── */
+      .alert-error {
+        display: none;
+        align-items: center;
+        gap: 0.6rem;
+        background: rgba(255, 62, 108, 0.07);
+        border: 1px solid rgba(255, 62, 108, 0.3);
+        border-radius: 4px;
+        padding: 0.7rem 1rem;
+        margin-bottom: 1.2rem;
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        color: var(--accent3);
+        animation: shake 0.35s ease;
+      }
+      .alert-error.show {
+        display: flex;
+      }
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        25% {
+          transform: translateX(-5px);
+        }
+        75% {
+          transform: translateX(5px);
+        }
+      }
+
+      /* ── RUN BUTTON ───────────────────────────── */
+      .btn-run {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.65rem;
+        padding: 0.92rem;
+        background: linear-gradient(135deg, var(--accent), #0091b5);
+        color: #000;
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 0.95rem;
+        letter-spacing: 0.04em;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        transition:
+          transform 0.25s,
+          box-shadow 0.25s;
+      }
+      .btn-run::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, var(--accent2), var(--accent));
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .btn-run:hover::before {
+        opacity: 1;
+      }
+      .btn-run:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 36px rgba(0, 210, 255, 0.35);
+      }
+      .btn-run:active {
+        transform: translateY(0);
+      }
+      .btn-run:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+      .btn-run:disabled::before {
+        display: none;
+      }
+      .btn-run > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      /* Loading spinner inside button */
+      .btn-run .spinner {
+        display: none;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(0, 0, 0, 0.3);
+        border-top-color: #000;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .btn-run.loading .spinner {
+        display: block;
+      }
+      .btn-run.loading .btn-label {
+        display: none;
+      }
+      .btn-run.loading .fa-shield-halved,
+      .btn-run.loading .fa-arrow-right {
+        display: none;
+      }
+
+      @media (max-width: 480px) {
+        nav {
+          padding: 0 1.2rem;
+        }
+        .upload-card {
+          padding: 2rem 1.4rem 1.6rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── NAVBAR ───────────────────────────────── -->
+    <nav>
+      <a class="nav-brand" href="{{ url_for('home') }}">
+        <div class="shield">IDS</div>
+      </a>
+      <div class="nav-links">
+        <a href="{{ url_for('home') }}" class="nav-pill ghost"
+          ><i class="fa-solid fa-house"></i> Home</a
+        >
+        <a href="{{ url_for('history') }}" class="nav-pill ghost"
+          ><i class="fa-solid fa-clock-rotate-left"></i> History</a
+        >
+        <a href="{{ url_for('logout') }}" class="nav-pill filled"
+          ><i class="fa-solid fa-right-from-bracket"></i> Logout</a
+        >
+      </div>
+    </nav>
+
+    <!-- ── MAIN ─────────────────────────────────── -->
+    <div class="page-wrap">
+      <div class="upload-card">
+        <!-- Status bar -->
+        <div class="status-bar">
+          <div class="status-left">
+            <div class="status-dot"></div>
+            <span class="status-text">SYSTEM READY</span>
+          </div>
+        </div>
+
+        <!-- Upload form -->
+        <form
+          method="POST"
+          action="{{ url_for('upload') }}"
+          enctype="multipart/form-data"
+          id="uploadForm"
+        >
+          <!-- Drop zone -->
+          <div class="drop-zone" id="dropZone">
+            <div class="corner tl"></div>
+            <div class="corner tr"></div>
+            <div class="corner bl"></div>
+            <div class="corner br"></div>
+
+            <div class="drop-icon-wrap">
+              <div class="drop-icon-ring"></div>
+              <div class="drop-icon-inner">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+              </div>
+            </div>
+
+            <div class="drop-title">Drag &amp; Drop CSV File</div>
+            <div class="drop-sub">
+              Drop your network traffic dataset here<br />
+              or <span>browse to select a file</span>
+            </div>
+
+            <button type="button" class="btn-choose" id="chooseBtn">
+              <i class="fa-solid fa-folder-open"></i> Choose File
+            </button>
+
+            <input type="file" id="fileInput" name="file" accept=".csv" />
+          </div>
+
+          <!-- Selected file info -->
+          <div class="file-info" id="fileInfo">
+            <i class="fa-solid fa-file-csv file-info-icon"></i>
+            <div class="file-info-meta">
+              <div class="file-info-name" id="fileName">—</div>
+              <div class="file-info-size" id="fileSize">—</div>
+            </div>
+            <button
+              type="button"
+              class="file-info-remove"
+              id="removeFile"
+              title="Remove file"
+            >
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <!-- Required Features Note -->
+          <div class="features-note">
+            <div class="features-note-title">
+              <i class="fa-solid fa-circle-exclamation"></i>
+              Required Features
+            </div>
+            <div class="features-note-body">
+              Your dataset <strong>must contain</strong> these critical columns
+              for the detection system to work correctly:
+            </div>
+            <div class="features-pills">
+              <span class="feature-pill"
+                ><i class="fa-solid fa-tag"></i> duration</span
+              >
+              <span class="feature-pill"
+                ><i class="fa-solid fa-tag"></i> protocol_type</span
+              >
+              <span class="feature-pill"
+                ><i class="fa-solid fa-tag"></i> service</span
+              >
+              <span class="feature-pill"
+                ><i class="fa-solid fa-tag"></i> flag</span
+              >
+              <span class="feature-pill"
+                ><i class="fa-solid fa-tag"></i> src_bytes</span
+              >
+              <span class="feature-pill"
+                ><i class="fa-solid fa-tag"></i> dst_bytes</span
+              >
+            </div>
+          </div>
+
+          <!-- Instructions -->
+          <div class="instructions">
+            <div class="instr-title">
+              <i class="fa-solid fa-circle-info"></i> Upload Guidelines
+            </div>
+            <ul class="instr-list">
+              <li>
+                <i class="fa-solid fa-check"></i> File must be in
+                <strong style="color: var(--text)">.CSV format</strong> only
+              </li>
+              <li>
+                <i class="fa-solid fa-check"></i> Must be an
+                <strong style="color: var(--text)">NSL-KDD format</strong>
+                network traffic dataset
+              </li>
+              <li>
+                <i class="fa-solid fa-check"></i> Column headers must match the
+                required feature names exactly
+              </li>
+              <li>
+                <i class="fa-solid fa-check"></i> Max file size:
+                <strong style="color: var(--text)">50 MB</strong>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Error placeholder -->
+          <div class="alert-error" id="uploadError">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span id="errorMsg">Please upload a valid CSV file.</span>
+          </div>
+
+          <!-- Run Detection -->
+          <button type="submit" class="btn-run" id="runBtn" disabled>
+            <i class="fa-solid fa-shield-halved"></i>
+            <span class="btn-label">Run Detection</span>
+            <div class="spinner"></div>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      const dropZone = document.getElementById("dropZone");
+      const fileInput = document.getElementById("fileInput");
+      const chooseBtn = document.getElementById("chooseBtn");
+      const fileInfo = document.getElementById("fileInfo");
+      const fileName = document.getElementById("fileName");
+      const fileSize = document.getElementById("fileSize");
+      const removeFile = document.getElementById("removeFile");
+      const runBtn = document.getElementById("runBtn");
+      const uploadError = document.getElementById("uploadError");
+      const errorMsg = document.getElementById("errorMsg");
+
+      // Open file picker
+      chooseBtn.addEventListener("click", () => fileInput.click());
+      dropZone.addEventListener("click", (e) => {
+        if (e.target === chooseBtn || chooseBtn.contains(e.target)) return;
+        fileInput.click();
+      });
+
+      // Drag events
+      ["dragenter", "dragover"].forEach((ev) =>
+        dropZone.addEventListener(ev, (e) => {
+          e.preventDefault();
+          dropZone.classList.add("dragover");
+        }),
+      );
+      ["dragleave", "dragend"].forEach((ev) =>
+        dropZone.addEventListener(ev, () =>
+          dropZone.classList.remove("dragover"),
+        ),
+      );
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+        const files = e.dataTransfer.files;
+        if (files.length) handleFile(files[0]);
+      });
+
+      // File input change
+      fileInput.addEventListener("change", () => {
+        if (fileInput.files.length) handleFile(fileInput.files[0]);
+      });
+
+      // Remove file
+      removeFile.addEventListener("click", () => {
+        fileInput.value = "";
+        fileInfo.classList.remove("show");
+        runBtn.disabled = true;
+        uploadError.classList.remove("show");
+      });
+
+      function formatBytes(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / 1048576).toFixed(2) + " MB";
+      }
+
+      function handleFile(file) {
+        uploadError.classList.remove("show");
+
+        if (!file.name.toLowerCase().endsWith(".csv")) {
+          errorMsg.textContent =
+            "Invalid file type. Please upload a .CSV file.";
+          uploadError.classList.add("show");
+          runBtn.disabled = true;
+          fileInfo.classList.remove("show");
+          return;
+        }
+        if (file.size > 52428800) {
+          // 50 MB
+          errorMsg.textContent =
+            "File exceeds 50 MB limit. Please upload a smaller file.";
+          uploadError.classList.add("show");
+          runBtn.disabled = true;
+          fileInfo.classList.remove("show");
+          return;
+        }
+
+        fileName.textContent = file.name;
+        fileSize.textContent = formatBytes(file.size) + " · CSV Dataset";
+        fileInfo.classList.add("show");
+        runBtn.disabled = false;
+
+        // Sync to real input if dropped
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+      }
+
+      // Loading state on submit
+      document.getElementById("uploadForm").addEventListener("submit", (e) => {
+        if (!fileInput.files.length) {
+          e.preventDefault();
+          errorMsg.textContent =
+            "Please select a CSV file before running detection.";
+          uploadError.classList.add("show");
+          return;
+        }
+        runBtn.classList.add("loading");
+        runBtn.disabled = true;
+      });
+    </script>
+  </body>
+</html>

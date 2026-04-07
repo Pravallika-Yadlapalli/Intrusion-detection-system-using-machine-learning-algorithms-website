@@ -1,0 +1,1282 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IDS — Detection Results</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+      :root {
+        --bg: #030a12;
+        --surface: #071524;
+        --glass: rgba(7, 28, 54, 0.55);
+        --border: rgba(0, 210, 255, 0.12);
+        --accent: #00d2ff;
+        --accent2: #00ff9d;
+        --accent3: #ff3e6c;
+        --warn: #f5a623;
+        --muted: #3a6a8a;
+        --text: #c8e6f5;
+        --text-dim: #5a8aaa;
+        --mono: "Share Tech Mono", monospace;
+        --display: "Syne", sans-serif;
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--display);
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(0, 210, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 210, 255, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+        z-index: 0;
+      }
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.15) 2px,
+          rgba(0, 0, 0, 0.15) 4px
+        );
+        pointer-events: none;
+        z-index: 999;
+        opacity: 0.3;
+      }
+
+      /* NAVBAR */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 2.5rem;
+        height: 64px;
+        background: rgba(3, 10, 18, 0.85);
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid var(--border);
+      }
+      .nav-brand {
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+      }
+      .nav-brand .shield {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        clip-path: polygon(
+          50% 0%,
+          100% 25%,
+          100% 75%,
+          50% 100%,
+          0% 75%,
+          0% 25%
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        color: #000;
+        font-weight: 900;
+        font-family: var(--display);
+        animation: shieldPulse 3s ease-in-out infinite;
+      }
+      @keyframes shieldPulse {
+        0%,
+        100% {
+          filter: drop-shadow(0 0 6px var(--accent));
+        }
+        50% {
+          filter: drop-shadow(0 0 18px var(--accent2));
+        }
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      .nav-pill {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.4rem 1.1rem;
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        letter-spacing: 0.06em;
+        text-decoration: none;
+        transition: all 0.25s;
+      }
+      .nav-pill.ghost {
+        border: 1px solid var(--border);
+        color: var(--accent);
+        background: transparent;
+      }
+      .nav-pill.ghost:hover {
+        background: rgba(0, 210, 255, 0.08);
+        border-color: var(--accent);
+        box-shadow: 0 0 16px rgba(0, 210, 255, 0.2);
+      }
+      .nav-pill.filled {
+        border: 1px solid var(--accent2);
+        background: rgba(0, 255, 157, 0.08);
+        color: var(--accent2);
+      }
+      .nav-pill.filled:hover {
+        background: rgba(0, 255, 157, 0.18);
+        box-shadow: 0 0 20px rgba(0, 255, 157, 0.25);
+      }
+      .nav-pill.danger {
+        border: 1px solid rgba(255, 62, 108, 0.3);
+        background: rgba(255, 62, 108, 0.06);
+        color: var(--accent3);
+      }
+      .nav-pill.danger:hover {
+        background: rgba(255, 62, 108, 0.14);
+        box-shadow: 0 0 16px rgba(255, 62, 108, 0.2);
+      }
+
+      /* PAGE */
+      .page {
+        position: relative;
+        z-index: 1;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 5rem 2rem 4rem;
+      }
+
+      /* PAGE HEADER */
+      .page-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 2.5rem;
+        padding-bottom: 1.8rem;
+        border-bottom: 1px solid var(--border);
+        animation: fadeUp 0.5s ease forwards;
+      }
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(16px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      .page-tag {
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        letter-spacing: 0.18em;
+        color: var(--accent);
+        text-transform: uppercase;
+        margin-bottom: 0.4rem;
+      }
+      .page-title {
+        font-size: clamp(1.5rem, 3vw, 2.1rem);
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: -0.01em;
+      }
+      .page-title span {
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .page-meta {
+        display: flex;
+        align-items: center;
+        gap: 1.2rem;
+        margin-top: 0.5rem;
+        flex-wrap: wrap;
+      }
+      .meta-chip {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        color: var(--text-dim);
+      }
+      .meta-chip i {
+        font-size: 0.65rem;
+      }
+      .meta-chip.ok {
+        color: var(--accent2);
+      }
+      .btn-export {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.55rem 1.3rem;
+        border: 1px solid rgba(0, 210, 255, 0.25);
+        border-radius: 4px;
+        background: transparent;
+        color: var(--accent);
+        font-family: var(--mono);
+        font-size: 0.76rem;
+        letter-spacing: 0.07em;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.25s;
+        white-space: nowrap;
+      }
+      .btn-export:hover {
+        background: rgba(0, 210, 255, 0.08);
+        border-color: var(--accent);
+        box-shadow: 0 0 16px rgba(0, 210, 255, 0.15);
+      }
+
+      /* SUMMARY CARDS */
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.2rem;
+        margin-bottom: 2rem;
+      }
+      .summary-card {
+        position: relative;
+        background: var(--glass);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1.5rem 1.6rem;
+        backdrop-filter: blur(20px);
+        overflow: hidden;
+        transition: all 0.3s;
+        animation: fadeUp 0.5s ease forwards;
+      }
+      .summary-card:nth-child(2) {
+        animation-delay: 0.08s;
+        opacity: 0;
+      }
+      .summary-card:nth-child(3) {
+        animation-delay: 0.16s;
+        opacity: 0;
+      }
+      .summary-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        border-radius: 8px 8px 0 0;
+      }
+      .summary-card.total::before {
+        background: linear-gradient(90deg, var(--accent), transparent);
+      }
+      .summary-card.normal::before {
+        background: linear-gradient(90deg, var(--accent2), transparent);
+      }
+      .summary-card.attack::before {
+        background: linear-gradient(90deg, var(--accent3), transparent);
+      }
+      .summary-card::after {
+        content: "";
+        position: absolute;
+        bottom: -20px;
+        right: -20px;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        opacity: 0.06;
+        transition: opacity 0.3s;
+      }
+      .summary-card.total::after {
+        background: var(--accent);
+      }
+      .summary-card.normal::after {
+        background: var(--accent2);
+      }
+      .summary-card.attack::after {
+        background: var(--accent3);
+      }
+      .summary-card:hover::after {
+        opacity: 0.13;
+      }
+      .summary-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(0, 210, 255, 0.25);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+      }
+      .summary-card.normal:hover {
+        border-color: rgba(0, 255, 157, 0.25);
+      }
+      .summary-card.attack:hover {
+        border-color: rgba(255, 62, 108, 0.25);
+      }
+      .card-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+      }
+      .card-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.95rem;
+      }
+      .total .card-icon {
+        background: rgba(0, 210, 255, 0.1);
+        color: var(--accent);
+        border: 1px solid rgba(0, 210, 255, 0.2);
+      }
+      .normal .card-icon {
+        background: rgba(0, 255, 157, 0.1);
+        color: var(--accent2);
+        border: 1px solid rgba(0, 255, 157, 0.2);
+      }
+      .attack .card-icon {
+        background: rgba(255, 62, 108, 0.1);
+        color: var(--accent3);
+        border: 1px solid rgba(255, 62, 108, 0.2);
+      }
+      .card-trend {
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        padding: 0.2rem 0.55rem;
+        border-radius: 2px;
+        letter-spacing: 0.06em;
+      }
+      .total .card-trend {
+        color: var(--accent);
+        background: rgba(0, 210, 255, 0.08);
+        border: 1px solid rgba(0, 210, 255, 0.15);
+      }
+      .normal .card-trend {
+        color: var(--accent2);
+        background: rgba(0, 255, 157, 0.08);
+        border: 1px solid rgba(0, 255, 157, 0.15);
+      }
+      .attack .card-trend {
+        color: var(--accent3);
+        background: rgba(255, 62, 108, 0.08);
+        border: 1px solid rgba(255, 62, 108, 0.15);
+      }
+      .card-num {
+        font-family: var(--mono);
+        font-size: 2.2rem;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 0.3rem;
+      }
+      .total .card-num {
+        color: var(--accent);
+      }
+      .normal .card-num {
+        color: var(--accent2);
+      }
+      .attack .card-num {
+        color: var(--accent3);
+      }
+      .card-label {
+        font-size: 0.8rem;
+        color: var(--text-dim);
+        font-weight: 600;
+        margin-bottom: 0.6rem;
+      }
+      .card-bar-wrap {
+        height: 3px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 2px;
+      }
+      .card-bar {
+        height: 3px;
+        border-radius: 2px;
+        transition: width 1.2s ease;
+      }
+      .total .card-bar {
+        background: linear-gradient(
+          90deg,
+          var(--accent),
+          rgba(0, 210, 255, 0.4)
+        );
+      }
+      .normal .card-bar {
+        background: linear-gradient(
+          90deg,
+          var(--accent2),
+          rgba(0, 255, 157, 0.4)
+        );
+      }
+      .attack .card-bar {
+        background: linear-gradient(
+          90deg,
+          var(--accent3),
+          rgba(255, 62, 108, 0.4)
+        );
+      }
+
+      /* CHARTS */
+      .charts-row {
+        display: grid;
+        grid-template-columns: 1fr 1.8fr;
+        gap: 1.2rem;
+        margin-bottom: 2rem;
+      }
+      .chart-card {
+        background: var(--glass);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1.6rem;
+        backdrop-filter: blur(20px);
+        transition: border-color 0.3s;
+        animation: fadeUp 0.5s ease 0.2s forwards;
+        opacity: 0;
+      }
+      .chart-card:hover {
+        border-color: rgba(0, 210, 255, 0.22);
+      }
+      .chart-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.4rem;
+      }
+      .chart-tag {
+        font-family: var(--mono);
+        font-size: 0.67rem;
+        letter-spacing: 0.14em;
+        color: var(--accent);
+        text-transform: uppercase;
+      }
+      .chart-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #fff;
+      }
+      .chart-legend {
+        display: flex;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-family: var(--mono);
+        font-size: 0.67rem;
+        color: var(--text-dim);
+      }
+      .legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      .chart-wrap {
+        position: relative;
+      }
+      .pie-wrap {
+        max-width: 220px;
+        margin: 0 auto;
+      }
+
+      /* TABLE */
+      .table-card {
+        background: var(--glass);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        backdrop-filter: blur(20px);
+        overflow: hidden;
+        animation: fadeUp 0.5s ease 0.3s forwards;
+        opacity: 0;
+      }
+      .table-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.3rem 1.6rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .table-tag {
+        font-family: var(--mono);
+        font-size: 0.67rem;
+        letter-spacing: 0.14em;
+        color: var(--accent);
+        text-transform: uppercase;
+      }
+      .table-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #fff;
+      }
+      .table-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+      }
+      .search-wrap {
+        position: relative;
+      }
+      .search-wrap i {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--muted);
+        font-size: 0.72rem;
+      }
+      .search-input {
+        background: rgba(3, 15, 30, 0.6);
+        border: 1px solid rgba(0, 210, 255, 0.1);
+        border-radius: 4px;
+        padding: 0.45rem 0.8rem 0.45rem 2rem;
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        outline: none;
+        width: 180px;
+        transition: all 0.25s;
+      }
+      .search-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(0, 210, 255, 0.1);
+      }
+      .search-input::placeholder {
+        color: rgba(90, 138, 170, 0.4);
+      }
+      .filter-select {
+        background: rgba(3, 15, 30, 0.6);
+        border: 1px solid rgba(0, 210, 255, 0.1);
+        border-radius: 4px;
+        padding: 0.45rem 0.7rem;
+        color: var(--text-dim);
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        outline: none;
+        cursor: pointer;
+        transition: all 0.25s;
+      }
+      .filter-select:focus {
+        border-color: var(--accent);
+      }
+      .table-wrap {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      thead tr {
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        padding: 0.85rem 1.2rem;
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        letter-spacing: 0.12em;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        text-align: left;
+        white-space: nowrap;
+      }
+      th:first-child {
+        padding-left: 1.6rem;
+      }
+      th:last-child {
+        padding-right: 1.6rem;
+      }
+      tbody tr {
+        border-bottom: 1px solid rgba(0, 210, 255, 0.05);
+        transition: background 0.2s;
+      }
+      tbody tr:last-child {
+        border-bottom: none;
+      }
+      tbody tr:hover {
+        background: rgba(0, 210, 255, 0.04);
+      }
+      td {
+        padding: 0.78rem 1.2rem;
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        color: var(--text);
+      }
+      td:first-child {
+        padding-left: 1.6rem;
+        color: var(--text-dim);
+      }
+      td:last-child {
+        padding-right: 1.6rem;
+      }
+      .record-id {
+        color: var(--text-dim) !important;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.22rem 0.65rem;
+        border-radius: 3px;
+        font-size: 0.68rem;
+        letter-spacing: 0.06em;
+        font-weight: 600;
+      }
+      .badge.normal {
+        background: rgba(0, 255, 157, 0.08);
+        color: var(--accent2);
+        border: 1px solid rgba(0, 255, 157, 0.2);
+      }
+      .badge.attack {
+        background: rgba(255, 62, 108, 0.08);
+        color: var(--accent3);
+        border: 1px solid rgba(255, 62, 108, 0.2);
+      }
+      .badge i {
+        font-size: 0.6rem;
+      }
+      .attack-type {
+        display: inline-block;
+        font-size: 0.7rem;
+        color: var(--warn);
+        background: rgba(245, 166, 35, 0.07);
+        border: 1px solid rgba(245, 166, 35, 0.2);
+        border-radius: 3px;
+        padding: 0.15rem 0.5rem;
+      }
+      .attack-type.none {
+        color: var(--text-dim);
+        background: none;
+        border: none;
+        padding: 0;
+      }
+      .confidence {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .conf-bar-wrap {
+        flex: 1;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 2px;
+        min-width: 50px;
+      }
+      .conf-bar {
+        height: 3px;
+        border-radius: 2px;
+      }
+      .conf-bar.high {
+        background: var(--accent2);
+      }
+      .conf-bar.medium {
+        background: var(--warn);
+      }
+      .conf-bar.low {
+        background: var(--accent3);
+      }
+      .conf-val {
+        font-size: 0.7rem;
+        color: var(--text-dim);
+        white-space: nowrap;
+      }
+      .table-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 1.6rem;
+        border-top: 1px solid var(--border);
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+      .table-count {
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        color: var(--text-dim);
+      }
+      .table-count span {
+        color: var(--accent);
+      }
+      .pagination {
+        display: flex;
+        gap: 0.4rem;
+      }
+      .pg-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-dim);
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .pg-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .pg-btn.active {
+        background: rgba(0, 210, 255, 0.12);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      @media (max-width: 900px) {
+        .charts-row {
+          grid-template-columns: 1fr;
+        }
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 600px) {
+        nav {
+          padding: 0 1.2rem;
+        }
+        .page {
+          padding: 5rem 1rem 3rem;
+        }
+        .table-controls {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .search-input {
+          width: 140px;
+        }
+      }
+
+      /* ── ERROR BLOCK ── */
+      .error-block {
+        display: flex;
+        align-items: flex-start;
+        gap: 1.4rem;
+        background: rgba(255, 62, 108, 0.06);
+        border: 1px solid rgba(255, 62, 108, 0.3);
+        border-radius: 8px;
+        padding: 2rem 2rem;
+        margin-bottom: 2rem;
+        animation: fadeUp 0.5s ease forwards;
+        flex-wrap: wrap;
+      }
+      .error-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        flex-shrink: 0;
+        background: rgba(255, 62, 108, 0.12);
+        color: var(--accent3);
+        border: 1px solid rgba(255, 62, 108, 0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+      }
+      .error-content {
+        flex: 1;
+        min-width: 200px;
+      }
+      .error-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 0.4rem;
+      }
+      .error-msg {
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        color: var(--text-dim);
+        line-height: 1.6;
+      }
+      .error-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.55rem 1.2rem;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 62, 108, 0.3);
+        background: rgba(255, 62, 108, 0.08);
+        color: var(--accent3);
+        font-family: var(--mono);
+        font-size: 0.76rem;
+        text-decoration: none;
+        transition: all 0.25s;
+        white-space: nowrap;
+        align-self: center;
+      }
+      .error-btn:hover {
+        background: rgba(255, 62, 108, 0.16);
+        border-color: var(--accent3);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- NAVBAR -->
+    <nav>
+      <a class="nav-brand" href="{{ url_for('home') }}">
+        <div class="shield">IDS</div>
+      </a>
+      <div class="nav-links">
+        <a href="{{ url_for('home') }}" class="nav-pill ghost"
+          ><i class="fa-solid fa-house"></i> Home</a
+        >
+        <a href="{{ url_for('upload') }}" class="nav-pill ghost"
+          ><i class="fa-solid fa-upload"></i> Upload</a
+        >
+        <a href="{{ url_for('history') }}" class="nav-pill ghost"
+          ><i class="fa-solid fa-clock-rotate-left"></i> History</a
+        >
+        <a href="{{ url_for('logout') }}" class="nav-pill danger"
+          ><i class="fa-solid fa-right-from-bracket"></i> Logout</a
+        >
+      </div>
+    </nav>
+
+    <!-- PAGE -->
+    <div class="page">
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-tag">// detection_output</div>
+          <div class="page-title">Analysis <span>Results</span></div>
+          <div class="page-meta">
+            <span class="meta-chip"
+              ><i class="fa-solid fa-file-csv"></i> {{ filename }}</span
+            >
+            <span class="meta-chip"
+              ><i class="fa-solid fa-clock"></i> Analysed just now</span
+            >
+            <span class="meta-chip ok"
+              ><i class="fa-solid fa-circle-check"></i> SVM (RBF) — 80.1%
+              accuracy</span
+            >
+          </div>
+        </div>
+        <a href="#" class="btn-export" onclick="exportCSV()">
+          <i class="fa-solid fa-download"></i> Export CSV
+        </a>
+      </div>
+
+      <!-- ERROR BLOCK — shown only when has_error is True -->
+      {% if has_error %}
+      <div class="error-block">
+        <div class="error-icon">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div class="error-content">
+          <div class="error-title">Detection Failed</div>
+          <div class="error-msg">{{ error_message }}</div>
+        </div>
+        <a href="{{ url_for('upload') }}" class="error-btn">
+          <i class="fa-solid fa-arrow-left"></i> Try Again
+        </a>
+      </div>
+      {% endif %}
+
+      <!-- RESULTS — shown only when no error -->
+      {% if not has_error %}
+
+      <!-- Summary Cards -->
+      <div class="summary-grid">
+        <div class="summary-card total">
+          <div class="card-top">
+            <div class="card-icon"><i class="fa-solid fa-database"></i></div>
+            <span class="card-trend">TOTAL</span>
+          </div>
+          <div class="card-num" id="totalNum">0</div>
+          <div class="card-label">Total Records Analysed</div>
+          <div class="card-bar-wrap">
+            <div class="card-bar" id="totalBar" style="width: 0%"></div>
+          </div>
+        </div>
+        <div class="summary-card normal">
+          <div class="card-top">
+            <div class="card-icon">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <span class="card-trend">SAFE</span>
+          </div>
+          <div class="card-num" id="normalNum">0</div>
+          <div class="card-label">Normal Traffic</div>
+          <div class="card-bar-wrap">
+            <div class="card-bar" id="normalBar" style="width: 0%"></div>
+          </div>
+        </div>
+        <div class="summary-card attack">
+          <div class="card-top">
+            <div class="card-icon">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <span class="card-trend">THREAT</span>
+          </div>
+          <div class="card-num" id="attackNum">0</div>
+          <div class="card-label">Attacks Detected</div>
+          <div class="card-bar-wrap">
+            <div class="card-bar" id="attackBar" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-row">
+        <!-- Pie Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title-wrap">
+              <div class="chart-tag">// distribution</div>
+              <div class="chart-title">Traffic Split</div>
+            </div>
+          </div>
+          <div class="chart-wrap pie-wrap">
+            <canvas id="pieChart"></canvas>
+          </div>
+          <div
+            class="chart-legend"
+            style="justify-content: center; margin-top: 1rem"
+          >
+            <div class="legend-item">
+              <div class="legend-dot" style="background: var(--accent2)"></div>
+              Normal
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background: var(--accent3)"></div>
+              Attack
+            </div>
+          </div>
+        </div>
+
+        <!-- Bar Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title-wrap">
+              <div class="chart-tag">// traffic_breakdown</div>
+              <div class="chart-title">Normal vs Attack</div>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item">
+                <div
+                  class="legend-dot"
+                  style="background: var(--accent2)"
+                ></div>
+                Normal
+              </div>
+              <div class="legend-item">
+                <div
+                  class="legend-dot"
+                  style="background: var(--accent3)"
+                ></div>
+                Attack
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="barChart" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Predictions Table -->
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title-wrap">
+            <div class="table-tag">// prediction_log</div>
+            <div class="table-title">Record Predictions</div>
+          </div>
+          <div class="table-controls">
+            <div class="search-wrap">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input
+                class="search-input"
+                type="text"
+                id="searchInput"
+                placeholder="Search records..."
+              />
+            </div>
+            <select class="filter-select" id="filterSelect">
+              <option value="all">All</option>
+              <option value="normal">Normal</option>
+              <option value="attack">Attack</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table id="resultsTable">
+            <thead>
+              <tr>
+                <th>Record ID</th>
+                <th>Prediction</th>
+                <th>Attack Type</th>
+                <th>Confidence</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="table-footer">
+          <div class="table-count">
+            Showing <span id="showCount">0</span> of
+            <span id="totalCount">0</span> records
+          </div>
+          <div class="pagination" id="pagination"></div>
+        </div>
+      </div>
+
+      {% endif %}<!-- end if not has_error -->
+    </div>
+    <!-- /page -->
+
+    {% if not has_error %}
+    <script>
+      // ── REAL DATA FROM FLASK ──────────────────────────────────────
+      // Flask fills these values before sending the page to the browser
+      const TOTAL   = {{ total_records }};
+      const NORMAL  = {{ normal_count }};
+      const ATTACKS = {{ attack_count }};
+      const RECORDS = {{ records | tojson }};
+
+      // ── BUILD tableData FROM REAL FLASK PREDICTIONS ───────────────
+      // RECORDS is the list of dicts from predictor.py:
+      // [{ id: "REC-0001", prediction: "normal", attack_type: "—" }, ...]
+      const tableData = RECORDS.map((r) => ({
+        id:   r.id,
+        pred: r.prediction,
+        type: r.attack_type,
+        conf: r.prediction === "normal" ? 0.89 : 0.84,
+      }));
+
+      // ── COUNTER ANIMATION ─────────────────────────────────────────
+      function animateCount(el, target, dur) {
+        dur = dur || 1200;
+        var start = null;
+        function step(ts) {
+          if (!start) start = ts;
+          var p    = Math.min((ts - start) / dur, 1);
+          var ease = p < 0.5 ? 2 * p * p : -1 + (4 - 2 * p) * p;
+          el.textContent = Math.floor(ease * target).toLocaleString();
+          if (p < 1) requestAnimationFrame(step);
+          else el.textContent = target.toLocaleString();
+        }
+        requestAnimationFrame(step);
+      }
+
+      window.addEventListener("DOMContentLoaded", function () {
+        animateCount(document.getElementById("totalNum"),  TOTAL,   1000);
+        animateCount(document.getElementById("normalNum"), NORMAL,  1100);
+        animateCount(document.getElementById("attackNum"), ATTACKS, 1200);
+        setTimeout(function () {
+          document.getElementById("totalBar").style.width  = "100%";
+          document.getElementById("normalBar").style.width = (NORMAL  / TOTAL) * 100 + "%";
+          document.getElementById("attackBar").style.width = (ATTACKS / TOTAL) * 100 + "%";
+        }, 200);
+      });
+
+      // ── PIE CHART ─────────────────────────────────────────────────
+      var pieCtx = document.getElementById("pieChart").getContext("2d");
+      new Chart(pieCtx, {
+        type: "doughnut",
+        data: {
+          labels: ["Normal", "Attack"],
+          datasets: [{
+            data: [NORMAL, ATTACKS],
+            backgroundColor: ["rgba(0,255,157,.7)", "rgba(255,62,108,.7)"],
+            borderColor:     ["rgba(0,255,157,1)",  "rgba(255,62,108,1)"],
+            borderWidth: 1.5,
+            hoverOffset: 10,
+          }],
+        },
+        options: {
+          cutout: "68%",
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(3,10,18,.9)",
+              titleColor: "#c8e6f5", bodyColor: "#5a8aaa",
+              borderColor: "rgba(0,210,255,.2)", borderWidth: 1,
+              titleFont: { family: "Share Tech Mono" },
+              bodyFont:  { family: "Share Tech Mono" },
+              callbacks: {
+                label: function(ctx) {
+                  return " " + ctx.label + ": " + ctx.raw + " (" + ((ctx.raw / TOTAL) * 100).toFixed(1) + "%)";
+                }
+              },
+            },
+          },
+          animation: { duration: 1200, easing: "easeInOutQuart" },
+        },
+      });
+
+      // ── BAR CHART — real Normal vs Attack counts ──────────────────
+      var barCtx = document.getElementById("barChart").getContext("2d");
+      new Chart(barCtx, {
+        type: "bar",
+        data: {
+          labels: ["Normal", "Attack"],
+          datasets: [{
+            label: "Traffic Count",
+            data: [NORMAL, ATTACKS],
+            backgroundColor: ["rgba(0,255,157,.55)", "rgba(255,62,108,.55)"],
+            borderColor:     ["rgba(0,255,157,1)",   "rgba(255,62,108,1)"],
+            borderWidth: 1.5,
+            borderRadius: 4,
+            hoverBackgroundColor: ["rgba(0,255,157,.8)", "rgba(255,62,108,.8)"],
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(3,10,18,.9)",
+              titleColor: "#c8e6f5", bodyColor: "#5a8aaa",
+              borderColor: "rgba(0,210,255,.2)", borderWidth: 1,
+              titleFont: { family: "Share Tech Mono" },
+              bodyFont:  { family: "Share Tech Mono" },
+            },
+          },
+          scales: {
+            x: {
+              grid: { color: "rgba(0,210,255,.05)", borderColor: "transparent" },
+              ticks: { color: "#5a8aaa", font: { family: "Share Tech Mono", size: 11 } },
+            },
+            y: {
+              grid: { color: "rgba(0,210,255,.05)", borderColor: "transparent" },
+              ticks: { color: "#5a8aaa", font: { family: "Share Tech Mono", size: 11 } },
+              beginAtZero: true,
+            },
+          },
+          animation: { duration: 1200, easing: "easeInOutQuart" },
+        },
+      });
+
+      // ── TABLE ─────────────────────────────────────────────────────
+      var ROWS_PER_PAGE = 10;
+      var currentPage   = 1;
+      var filteredData  = tableData.slice();
+
+      function confClass(v) {
+        return v >= 0.85 ? "high" : v >= 0.7 ? "medium" : "low";
+      }
+
+      function renderTable() {
+        var tbody = document.getElementById("tableBody");
+        var start = (currentPage - 1) * ROWS_PER_PAGE;
+        var slice = filteredData.slice(start, start + ROWS_PER_PAGE);
+
+        tbody.innerHTML = slice.map(function(r) {
+          return "<tr>" +
+            "<td class='record-id'>" + r.id + "</td>" +
+            "<td><span class='badge " + r.pred + "'>" +
+              "<i class='fa-solid " + (r.pred === "normal" ? "fa-circle-check" : "fa-triangle-exclamation") + "'></i> " +
+              r.pred.charAt(0).toUpperCase() + r.pred.slice(1) +
+            "</span></td>" +
+            "<td>" + (r.type === "—"
+              ? "<span class='attack-type none'>—</span>"
+              : "<span class='attack-type'>" + r.type + "</span>") + "</td>" +
+            "<td><div class='confidence'>" +
+              "<div class='conf-bar-wrap'><div class='conf-bar " + confClass(r.conf) + "' style='width:" + (r.conf * 100).toFixed(0) + "%'></div></div>" +
+              "<span class='conf-val'>" + (r.conf * 100).toFixed(0) + "%</span>" +
+            "</div></td>" +
+          "</tr>";
+        }).join("");
+
+        document.getElementById("showCount").textContent  = filteredData.length;
+        document.getElementById("totalCount").textContent = filteredData.length;
+        renderPagination();
+      }
+
+      function renderPagination() {
+        var total = Math.ceil(filteredData.length / ROWS_PER_PAGE);
+        var pg    = document.getElementById("pagination");
+        var html  = "";
+        html += "<button class='pg-btn' onclick='changePage(" + (currentPage - 1) + ")' " + (currentPage === 1 ? "disabled" : "") + "><i class='fa-solid fa-chevron-left' style='font-size:.6rem'></i></button>";
+        for (var i = 1; i <= total; i++) {
+          if (i <= 3 || i === total || Math.abs(i - currentPage) <= 1) {
+            html += "<button class='pg-btn" + (i === currentPage ? " active" : "") + "' onclick='changePage(" + i + ")'>" + i + "</button>";
+          } else if (i === 4 && total > 5) {
+            html += "<span class='pg-btn' style='cursor:default;color:var(--text-dim)'>…</span>";
+          }
+        }
+        html += "<button class='pg-btn' onclick='changePage(" + (currentPage + 1) + ")' " + (currentPage === total ? "disabled" : "") + "><i class='fa-solid fa-chevron-right' style='font-size:.6rem'></i></button>";
+        pg.innerHTML = html;
+      }
+
+      function changePage(p) {
+        var max = Math.ceil(filteredData.length / ROWS_PER_PAGE);
+        if (p < 1 || p > max) return;
+        currentPage = p;
+        renderTable();
+      }
+
+      function applyFilters() {
+        var q   = document.getElementById("searchInput").value.toLowerCase();
+        var cat = document.getElementById("filterSelect").value;
+        filteredData = tableData.filter(function(r) {
+          var matchCat = cat === "all" || r.pred === cat;
+          var matchQ   = !q || r.id.toLowerCase().includes(q) || r.type.toLowerCase().includes(q);
+          return matchCat && matchQ;
+        });
+        currentPage = 1;
+        renderTable();
+      }
+
+      document.getElementById("searchInput").addEventListener("input",  applyFilters);
+      document.getElementById("filterSelect").addEventListener("change", applyFilters);
+
+      // Initial render
+      renderTable();
+
+      // ── EXPORT CSV ────────────────────────────────────────────────
+      function exportCSV() {
+        var headers = ["Record ID", "Prediction", "Attack Type", "Confidence"];
+        var rows    = tableData.map(function(r) {
+          return [r.id, r.pred, r.type, (r.conf * 100).toFixed(0) + "%"];
+        });
+        var csv = [headers].concat(rows).map(function(r) { return r.join(","); }).join("\n");
+        var a   = document.createElement("a");
+        a.href     = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+        a.download = "ids_results.csv";
+        a.click();
+      }
+    </script>
+    {% endif %}<!-- end if not has_error JS -->
+  </body>
+</html>
