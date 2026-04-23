@@ -6,7 +6,7 @@
     <title>IDS — Detection Results</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <link
@@ -846,6 +846,7 @@
         border-color: var(--accent3);
       }
     </style>
+    <link rel="stylesheet" href="/static/light_theme.css" />
   </head>
   <body>
     <!-- NAVBAR -->
@@ -1117,8 +1118,8 @@
           labels: ["Normal", "Attack"],
           datasets: [{
             data: [NORMAL, ATTACKS],
-            backgroundColor: ["rgba(0,255,157,.7)", "rgba(255,62,108,.7)"],
-            borderColor:     ["rgba(0,255,157,1)",  "rgba(255,62,108,1)"],
+            backgroundColor: ["#2E7D32", "#B71C1C"],
+            borderColor:     ["#2E7D32", "#B71C1C"],
             borderWidth: 1.5,
             hoverOffset: 10,
           }],
@@ -1128,9 +1129,9 @@
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: "rgba(3,10,18,.9)",
-              titleColor: "#c8e6f5", bodyColor: "#5a8aaa",
-              borderColor: "rgba(0,210,255,.2)", borderWidth: 1,
+              backgroundColor: "rgba(255,255,255,0.97)",
+              titleColor: "#1A1A1A", bodyColor: "#455A64",
+              borderColor: "#DADADA", borderWidth: 1,
               titleFont: { family: "Share Tech Mono" },
               bodyFont:  { family: "Share Tech Mono" },
               callbacks: {
@@ -1165,21 +1166,21 @@
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: "rgba(3,10,18,.9)",
-              titleColor: "#c8e6f5", bodyColor: "#5a8aaa",
-              borderColor: "rgba(0,210,255,.2)", borderWidth: 1,
+              backgroundColor: "rgba(255,255,255,0.97)",
+              titleColor: "#1A1A1A", bodyColor: "#455A64",
+              borderColor: "#DADADA", borderWidth: 1,
               titleFont: { family: "Share Tech Mono" },
               bodyFont:  { family: "Share Tech Mono" },
             },
           },
           scales: {
             x: {
-              grid: { color: "rgba(0,210,255,.05)", borderColor: "transparent" },
-              ticks: { color: "#5a8aaa", font: { family: "Share Tech Mono", size: 11 } },
+              grid: { color: "#EEEEEE", borderColor: "transparent" },
+              ticks: { color: "#455A64", font: { family: "Share Tech Mono", size: 11 } },
             },
             y: {
-              grid: { color: "rgba(0,210,255,.05)", borderColor: "transparent" },
-              ticks: { color: "#5a8aaa", font: { family: "Share Tech Mono", size: 11 } },
+              grid: { color: "#EEEEEE", borderColor: "transparent" },
+              ticks: { color: "#455A64", font: { family: "Share Tech Mono", size: 11 } },
               beginAtZero: true,
             },
           },
